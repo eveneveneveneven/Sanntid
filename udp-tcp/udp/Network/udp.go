@@ -17,7 +17,7 @@ type Udp_message struct {
 
 func Udp_init(localListenPort, broadcastListenPort, message_size int, send_ch, receive_ch chan Udp_message) (err error) {
 	//Generating broadcast address
-	baddr, err = net.ResolveUDPAddr("udp4", "255.255.255.255:"+strconv.Itoa(broadcastListenPort))
+	baddr, err = net.ResolveUDPAddr("udp4", "129.241.187.255:"+strconv.Itoa(broadcastListenPort))
 	if err != nil {
 		return err
 	}
@@ -45,8 +45,8 @@ func Udp_init(localListenPort, broadcastListenPort, message_size int, send_ch, r
 	go udp_receive_server(localListenConn, broadcastListenConn, message_size, receive_ch)
 	go udp_transmit_server(localListenConn, broadcastListenConn, send_ch)
 
-	//	fmt.Printf("Generating local address: \t Network(): %s \t String(): %s \n", laddr.Network(), laddr.String())
-	//	fmt.Printf("Generating broadcast address: \t Network(): %s \t String(): %s \n", baddr.Network(), baddr.String())
+	fmt.Printf("Generating local address: \t Network(): %s \t String(): %s \n", laddr.Network(), laddr.String())
+	fmt.Printf("Generating broadcast address: \t Network(): %s \t String(): %s \n", baddr.Network(), baddr.String())
 	return err
 }
 
@@ -63,9 +63,9 @@ func udp_transmit_server(lconn, bconn *net.UDPConn, send_ch chan Udp_message) {
 	var n int
 
 	for {
-		//		fmt.Printf("udp_transmit_server: waiting on new value on Global_Send_ch \n")
+		fmt.Printf("udp_transmit_server: waiting on new value on Global_Send_ch \n")
 		msg := <-send_ch
-		//		fmt.Printf("Writing %s \n", msg.Data)
+		fmt.Printf("udp_transmit_server: Writing %s \n", msg.Data)
 		if msg.Raddr == "broadcast" {
 			n, err = lconn.WriteToUDP([]byte(msg.Data), baddr)
 		} else {
@@ -80,7 +80,7 @@ func udp_transmit_server(lconn, bconn *net.UDPConn, send_ch chan Udp_message) {
 			fmt.Printf("Error: udp_transmit_server: writing\n")
 			panic(err)
 		}
-		//		fmt.Printf("udp_transmit_server: Sent %s to %s \n", msg.Data, msg.Raddr)
+		fmt.Printf("udp_transmit_server: Sent %s to %s \n", msg.Data, msg.Raddr)
 	}
 }
 
@@ -122,13 +122,18 @@ func udp_connection_reader(conn *net.UDPConn, message_size int, rcv_ch chan Udp_
 	buf := make([]byte, message_size)
 
 	for {
-		//		fmt.Printf("udp_connection_reader: Waiting on data from UDPConn\n")
+		fmt.Printf("udp_connection_reader: Waiting on data from UDPConn\n")
 		n, raddr, err := conn.ReadFromUDP(buf)
-		//		fmt.Printf("udp_connection_reader: Received %s from %s \n", string(buf), raddr.String())
+		fmt.Printf("udp_connection_reader: Received %s from %s \n", string(buf), raddr.String())
 		if err != nil || n < 0 {
 			fmt.Printf("Error: udp_connection_reader: reading\n")
 			panic(err)
 		}
 		rcv_ch <- Udp_message{Raddr: raddr.String(), Data: string(buf), Length: n}
 	}
+}
+
+textmsg := make([]byte)
+for i, val := range "hello" {
+	textmsg[i] = val
 }
