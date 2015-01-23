@@ -39,4 +39,5 @@ func main(){
 	<- subtracter_done
 	t1 := time.Now()
 	fmt.Printf("The call took %v to run, with value i = %v.\n", t1.Sub(t0), sum)
+	fmt.Println("Yolo")
 }
