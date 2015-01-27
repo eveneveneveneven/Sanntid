@@ -8,7 +8,7 @@ import (
 )
 
 type P struct {
-    first, last string
+    X, Y int64
 }
 
 func handleConnection(conn net.Conn) {

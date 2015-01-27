@@ -8,7 +8,7 @@ import (
 )
 
 type P struct {
-    first, last string
+    X, Y int64
 }
 
 func main() {
@@ -18,7 +18,7 @@ func main() {
         log.Fatal("Connection error", err)
     }
     encoder := gob.NewEncoder(conn)
-    p := &P{"edvard", "pettersen"}
+    p := &P{123, 321}
     encoder.Encode(p)
     conn.Close()
     fmt.Println("done");
