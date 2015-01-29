@@ -16,7 +16,6 @@ func handleConnection(conn net.Conn) {
     p := &P{}
     dec.Decode(p)
     fmt.Printf("Received : %+v\n", p);
-
 }
 
 func main() {

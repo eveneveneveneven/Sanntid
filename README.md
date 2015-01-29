@@ -1,7 +1,6 @@
 # Sanntid
 
-Edvard was here.
+Har store ambisjoner å få lagt inn både øvingene og heisprosjektet her.
+Gled dere.
 
-Don't look here, nothing works yet.
-
-Even was here.
+Tar forresten ingen ansvar over koden.
