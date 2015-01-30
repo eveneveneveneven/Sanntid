@@ -31,7 +31,7 @@ func main() {
     }
     for {
         n, raddr, err := ln.ReadFromUDP(p)
-        fmt.Printf("%v :: Message from %v = %s\n", time.Now(), raddr, p[:n])
+        fmt.Printf("%v :: Read a message from %v = %s\n", time.Now(), raddr, p[:n])
         if err != nil {
             fmt.Printf("Somer error %v\n", err)
             continue

@@ -16,7 +16,7 @@ func main() {
     defer conn.Close()
    	
    	p := make([]byte, 2048)
-    conn.Write([]byte("Connect to: 129.241.187.159:20011\x00"))
+    conn.Write([]byte("Connect to: 129.241.187.159:200110\x00"))
     n, _ := conn.Read(p)
     fmt.Printf("We got back msg :: %s\n", p[:n])
     fmt.Println("done");
