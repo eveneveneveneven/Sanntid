@@ -14,7 +14,7 @@ func main() {
 	recieve := false
 	fmt.Println("UDP client start")
 	// 129.241.187.136 - server IP
-	raddr, err := net.ResolveUDPAddr("udp", "129.241.187.255:30000")
+	raddr, err := net.ResolveUDPAddr("udp", "255.255.255.255:30000")
 	if err != nil {
 		fmt.Printf("Some error %v\n", err)
 		return
