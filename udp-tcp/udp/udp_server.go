@@ -31,11 +31,11 @@ func main() {
     }
     for {
         n, raddr, err := ln.ReadFromUDP(p)
-        fmt.Printf("%v :: Message from %v = %s\n", time.Now(), raddr, p[:n])
         if err != nil {
             fmt.Printf("Somer error %v\n", err)
             continue
         }
+        fmt.Printf("%v :: Message from %v = %s\n", time.Now(), raddr, p[:n])
         go handleConnection(ln, raddr)
     }
 }
