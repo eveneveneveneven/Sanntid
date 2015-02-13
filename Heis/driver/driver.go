@@ -16,8 +16,8 @@ import (
 
 func Io_init() {
 	if C.io_init() == 1 {
-		fmt.Println("Did work!")
+		fmt.Println("Driver did work!")
 	} else {
-		fmt.Println("Did not work!")
+		fmt.Println("Driver did not work!")
 	}
 }

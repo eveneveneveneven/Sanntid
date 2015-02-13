@@ -8,8 +8,6 @@ import (
     "strings"
 )
 
-const PORT = 20011
-
 type UDPHub struct {
 	master bool
 	p []byte
@@ -20,20 +18,24 @@ type UDPHub struct {
 	raddr *net.UDPAddr
 }
 
-func NewUDPHub() *UDPHub {
+func getLocalAddres() string {
+    baddr := &net.UDPAddr{
+        Port: PORT,
+        IP: net.IPv4bcast,
+    }
+    tempConn, _ := net.DialUDP("udp4", nil, baddr)
+    defer tempConn.Close()
+    tempAddr := tempConn.LocalAddr()
+    return strings.Split(tempAddr.String(), ":")[0] // only want ip
+}
+
+func newUDPHub() *UDPHub {
 	var u UDPHub
 
 	u.master = false
 	u.p = make([]byte, 1024)
 
-    baddr := &net.UDPAddr{
-        Port: PORT,
-        IP: net.IPv4bcast,
-    }
-	tempConn, _ := net.DialUDP("udp4", nil, baddr)
-    defer tempConn.Close()
-    tempAddr := tempConn.LocalAddr()
-    u.localAddr = strings.Split(tempAddr.String(), ":")[0] // only want ip
+    u.localAddr = getLocalAddres()
 
     u.laddr = &net.UDPAddr{
         Port: PORT,
@@ -44,15 +46,16 @@ func NewUDPHub() *UDPHub {
     return &u
 }
 
-func (u *UDPHub) FindMaster() (bool, error) {
+func (u *UDPHub) findMaster() (bool, string, error) {
 	ln, err := net.ListenUDP("udp", u.laddr)
     if err != nil {
         fmt.Printf("Some error %v\n", err)
-        return false, err
+        return false, "", err
     }
     defer ln.Close()
 
     searching := true
+    var masterIP string
 
     timeout := make(chan bool, 1)
     go func() {
@@ -71,24 +74,24 @@ func (u *UDPHub) FindMaster() (bool, error) {
                 fmt.Printf("Somer error %v, continuing listening\n", err)
                 continue
             }
-            fmt.Printf("Got %s\n", u.p[:n])
+            masterIP = string(u.p[:n])
             listener <- true
             u.raddr = raddr
-            return
+            break
         }
     }()
 
     select {
     case <-listener:
-        return true, nil
+        return true, masterIP, nil
 
     case <-timeout:
     	u.master = true
-    	return false, nil
+    	return false, "", nil
     }
 }
 
-func (u *UDPHub) BroadcastMaster(stop chan bool) {
+func (u *UDPHub) broadcastMaster(stop chan bool) {
 	baddr := &net.UDPAddr{
         Port: PORT,
         IP: net.IPv4bcast,
@@ -107,7 +110,7 @@ func (u *UDPHub) BroadcastMaster(stop chan bool) {
         case <-stop:
             break
         default:
-        	fmt.Fprintf(conn, "Master=" + u.localAddr) // trick!
+        	fmt.Fprintf(conn, u.localAddr) // trick! broadcasting master ip
             if err != nil {
                 fmt.Printf("Some error writing! %v\n", err)
             }
