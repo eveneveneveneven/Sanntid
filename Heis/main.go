@@ -12,8 +12,8 @@ func main() {
 	fmt.Println("Start main!")
 	driver.Io_init()
 	
-	stop := make(chan bool)
 	hub := network.NewHub()
+	stop := make(chan bool)
 	becameMaster, _ := hub.ResolveMasterNetwork(stop)
 	if becameMaster {
 		fmt.Println("I am Master!")
