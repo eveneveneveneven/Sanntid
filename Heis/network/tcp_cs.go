@@ -1,10 +1,9 @@
-package main
+package network
 
 import (
     "fmt"
     "log"
     "net"
-    "time"
     "encoding/gob"
 )
 
@@ -95,21 +94,4 @@ func (s *Server) CleanUp() {
 	if s.listener != nil {
 		s.listener.Close()
 	}
-}
-
-
-func main() {
-    c := NewClient("129.241.187.159", "20011")
-    s := NewServer(20011)
-    defer c.CleanUp()
-    defer s.CleanUp()
-    
-   	go s.ListenServer()
-   	for {
-	   	if err := c.ConnectServer(true); err != nil {
-			fmt.Println("Couldn't connect to server")
-		}
-		time.Sleep(1 * time.Second)
-    }
-    
 }

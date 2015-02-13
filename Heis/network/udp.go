@@ -3,6 +3,8 @@ package network
 import (
 	"time"
 	"net"
+    "fmt"
+    "os"
 )
 
 const PORT = 20011
@@ -25,6 +27,9 @@ func NewUDPHub() *UDPHub {
         Port: PORT,
         IP: net.ParseIP("localhost"),
     }
+    u.raddr = nil
+
+    return &u
 }
 
 func (u *UDPHub) FindMaster() (bool, error) {
@@ -35,19 +40,30 @@ func (u *UDPHub) FindMaster() (bool, error) {
     }
     defer ln.Close()
 
+    quitSearching := false
+
     timeout := make(chan bool, 1)
     go func() {
     	time.Sleep(1 * time.Second)
     	timeout <- true
+        quitSearching = true
+    }()
+
+    listener := make(chan bool, 1)
+    go func() {
+        for quitSearching {
+            _, raddr, err := ln.ReadFromUDP(u.p)
+            if err != nil {
+                fmt.Printf("Somer error %v\n, continuing listening", err)
+                continue
+            }  
+            u.raddr = raddr
+            return
+        }
     }()
 
     select {
-    case n, raddr, err := ln.ReadFromUDP(u.p):
-    	if err != nil {
-            fmt.Printf("Somer error %v\n, continuing listening", err)
-            continue
-        }
-        u.raddr = raddr
+    case <-listener:
         return true, nil
 
     case <-timeout:
@@ -57,13 +73,20 @@ func (u *UDPHub) FindMaster() (bool, error) {
 }
 
 func (u *UDPHub) BroadcastMaster() {
-	baddr = &net.UDPAddr{
+	baddr := &net.UDPAddr{
         Port: PORT,
         IP: net.ParseIP("broadcast"),
     }
 
+    socket, err := net.DialUDP("udp", nil, baddr)
+    if err != nil {
+        fmt.Println("BroadcastMaster could not dial up. Exiting")
+        os.Exit(1)
+    }
+
     for {
     	msg := "Master exists"
-    	raddr, err := net.WriteToUDP()
+    	socket.WriteToUDP([]byte(msg), baddr)
+        time.Sleep(100 * time.Millisecond)
     }
 }
