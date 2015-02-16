@@ -19,7 +19,8 @@ type Hub struct {
 func NewHub() *Hub {
 	var h Hub
 
-	h.master = false
+	h.id       = -1
+	h.master   = false
 	h.numConns = 0
 
 	h.udp = newUDPHub()
@@ -52,6 +53,7 @@ func (h *Hub) ResolveMasterNetwork(stop chan bool) (bool, error) {
 		h.id = 0
 
 		go h.udp.broadcastMaster(stop)
+		go h.tcp.startMasterServer(stop)
 
 		return true, nil
 	}

@@ -20,7 +20,7 @@ type UDPHub struct {
 // Finds the local IP address of the machine
 func getLocalAddres() string {
     baddr := &net.UDPAddr{
-        Port: PORT,
+        Port: UDP_PORT,
         IP: net.IPv4bcast,
     }
     tempConn, _ := net.DialUDP("udp4", nil, baddr)
@@ -37,7 +37,7 @@ func newUDPHub() *UDPHub {
     u.localAddr = getLocalAddres()
 
     u.laddr = &net.UDPAddr{
-        Port: PORT,
+        Port: UDP_PORT,
         IP: net.ParseIP("localhost"),
     }
     u.raddr = nil
@@ -49,7 +49,7 @@ func newUDPHub() *UDPHub {
 // Listens for 1 second, quits after first reading or none after 1 second.
 // returns (ifFound, masterIP, error)
 func (u *UDPHub) findMaster() (bool, string, error) {
-    // Create a listener which listens after broadcasts form potential Master on PORT
+    // Create a listener which listens after broadcasts form potential Master on UDP_PORT
 	ln, err := net.ListenUDP("udp", u.laddr)
     if err != nil {
         fmt.Printf("Some error %v\n", err)
@@ -72,7 +72,7 @@ func (u *UDPHub) findMaster() (bool, string, error) {
 
     // Listener function which listens after Master broadcast, if any.
     // Stores the first read it gets, sets this as Master, and quits searching.
-    // The message read from Master is its Master IP, which is stored for later.
+    // The message read from Master is the Master IP, which is stored for later use.
     listener := make(chan bool, 1)
     go func() {
         for searching {
@@ -82,14 +82,14 @@ func (u *UDPHub) findMaster() (bool, string, error) {
                 fmt.Printf("Somer error %v, continuing listening\n", err)
                 continue
             }
-            masterIP = string(u.p[:n])
             listener <- true
+            masterIP = string(u.p[:n])
             u.raddr = raddr
             break
         }
     }()
 
-    // Quits if it finds a broadcast, or 1 second has passed.
+    // Quits if it finds a broadcast or 1 second has passed.
     select {
     case <-listener:
         return true, masterIP, nil
@@ -103,14 +103,16 @@ func (u *UDPHub) findMaster() (bool, string, error) {
 // Is meant to be runned as a go-routine by the overall Hub struct
 // if Master is not found on the network in the first place.
 func (u *UDPHub) broadcastMaster(stop chan bool) {
+    // Broadcast address
 	baddr := &net.UDPAddr{
-        Port: PORT,
+        Port: UDP_PORT,
         IP: net.IPv4bcast,
     }
 
     // Create a broadcast-connection on the UDP network
     conn, err := net.DialUDP("udp", nil, baddr)
     if err != nil {
+        // If the program cant make a UDP connection, no need to run the program.
         fmt.Println("BroadcastMaster could not dial up. Exiting")
         os.Exit(1)
     }
@@ -124,7 +126,8 @@ func (u *UDPHub) broadcastMaster(stop chan bool) {
         case <-stop:
             break
         default:
-        	fmt.Fprintf(conn, u.localAddr) // trick! broadcasting master ip
+            // Brodcasting Master IP
+        	fmt.Fprintf(conn, u.localAddr) // trick to send a message on the UDP network!
             if err != nil {
                 fmt.Printf("Some error writing! %v\n", err)
             }
