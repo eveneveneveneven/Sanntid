@@ -36,15 +36,28 @@ func (t *TCPHub) handleConneciton(conn *net.TCPConn) {
 	    return 
 	}
 
-	encoder := gob.NewEncoder(conn)
-	sendMsg := NM_REQ_ACCE
-	if err := encoder.Encode(sendMsg); err != nil {
-		fmt.Printf("Some error %v\n", err)
-	    return 
-	}
+	switch recMsg.Header {
+	case ID_REQ_CONN:
+		encoder := gob.NewEncoder(conn)
+		if t.numConns < MAX_ELEVATORS {
+			sendMsg := NM_REQ_ACCEPT
+			sendMsg.ID = t.numConns + 1
+			if err := encoder.Encode(sendMsg); err != nil {
+				fmt.Printf("Some error %v\n", err)
+			    return 
+			}
 
-	t.conns[t.numConns] = conn
-	t.numConns += 1
+			t.conns[t.numConns] = conn
+			t.numConns += 1
+		} else {
+			sendMsg := NM_REQ_DENIED
+			if err := encoder.Encode(sendMsg); err != nil {
+				fmt.Printf("Some error %v\n", err)
+			    return 
+			}
+			conn.Close()
+		}
+	}
 }
 
 func (t *TCPHub) startMasterServer(stop <-chan bool) {
@@ -69,13 +82,11 @@ func (t *TCPHub) startMasterServer(stop <-chan bool) {
     }()
 
     for listening {
-		fmt.Println("Listening for connection")
     	conn, err := ln.AcceptTCP()
 	    if err != nil {
 	        fmt.Printf("Some error %v, continue listening\n", err)
 	        continue
 	    }
-	    fmt.Println("Got connection!")
 	    go t.handleConneciton(conn)
     }
 }
@@ -92,28 +103,25 @@ func (t *TCPHub) requestConnToNetwork(masterIP string) (bool, int, error) {
 	}
 	conn, err := net.DialTCP("tcp", nil, raddr)
 	if err != nil {
-		fmt.Printf("Some error %v\n", err)
 	    return false, -1, err
 	}
 
 	encoder := gob.NewEncoder(conn)
 	sendMsg := NM_REQ_CONN
 	if err := encoder.Encode(sendMsg); err != nil {
-		fmt.Printf("Some error %v\n", err)
 	    return false, -1, err
 	}
 
 	decoder := gob.NewDecoder(conn)
 	recMsg  := &networkMessage{}
 	if err := decoder.Decode(recMsg); err != nil {
-		fmt.Printf("Some error %v\n", err)
 	    return false, -1, err
 	}
 
 	if recMsg.Bool {
 		fmt.Println("Accepted connection to the network, begin transmition")
 		t.masterConn = conn
-		return true, 1, nil
+		return true, recMsg.ID, nil
 	} else {
 		fmt.Println("Denied connection to the network, quit program")
 		return false, -1, nil

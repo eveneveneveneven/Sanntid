@@ -15,6 +15,8 @@ type UDPHub struct {
 
 	laddr *net.UDPAddr
 	raddr *net.UDPAddr
+
+    ln *net.UDPConn
 }
 
 // Finds the local IP address of the machine
@@ -41,31 +43,32 @@ func newUDPHub() *UDPHub {
         IP: net.ParseIP("localhost"),
     }
     u.raddr = nil
+    u.ln = nil
 
     return &u
 }
 
 // Find a Master on the network if there are any.
-// Listens for 1 second, quits after first reading or none after 1 second.
+// Listens for 0.3 second, quits after first reading or none after 0.3 second.
 // returns (ifFound, masterIP, error)
-func (u *UDPHub) findMaster() (bool, string, error) {
-    // Create a listener which listens after broadcasts form potential Master on UDP_PORT
-	ln, err := net.ListenUDP("udp", u.laddr)
-    if err != nil {
-        fmt.Printf("Some error %v\n", err)
-        return false, "", err
+func (u *UDPHub) findMaster(report bool) (bool, string, error) {
+    if u.ln == nil {
+        // Create a listener which listens after broadcasts form potential Master on UDP_PORT
+    	ln, err := net.ListenUDP("udp", u.laddr)
+        if err != nil {
+            return false, "", err
+        }
+        u.ln = ln
     }
-    defer ln.Close()
-
     // Variable for continuing listening
     searching := true
     // Variable for storing the potential Master IP
     var masterIP string
 
-    // A timeout function which ends the search after 1 second
-    timeout := make(chan bool, 1)
+    // A timeout function which ends the search after 0.3 second
+    timeout := make(chan bool)
     go func() {
-    	time.Sleep(1 * time.Second)
+    	time.Sleep(300 * time.Millisecond)
     	timeout <- true
         searching = false
     }()
@@ -73,18 +76,19 @@ func (u *UDPHub) findMaster() (bool, string, error) {
     // Listener function which listens after Master broadcast, if any.
     // Stores the first read it gets, sets this as Master, and quits searching.
     // The message read from Master is the Master IP, which is stored for later use.
-    listener := make(chan bool, 1)
+    listener := make(chan bool)
     go func() {
         for searching {
-            fmt.Println("Searching for master")
-            n, raddr, err := ln.ReadFromUDP(u.p)
+            n, raddr, err := u.ln.ReadFromUDP(u.p)
             if err != nil {
-                fmt.Printf("Somer error %v, continuing listening\n", err)
+                fmt.Printf("Some error %v, continuing listening\n", err)
                 continue
             }
             listener <- true
-            masterIP = string(u.p[:n])
-            u.raddr = raddr
+            if report {
+                masterIP = string(u.p[:n])
+                u.raddr = raddr
+            }
             break
         }
     }()
@@ -102,7 +106,7 @@ func (u *UDPHub) findMaster() (bool, string, error) {
 // Functions which serves as the broadcaster for the UDPHub.
 // Is meant to be runned as a go-routine by the overall Hub struct
 // if Master is not found on the network in the first place.
-func (u *UDPHub) broadcastMaster(stop chan bool) {
+func (u *UDPHub) broadcastMaster(stop <-chan bool) {
     // Broadcast address
 	baddr := &net.UDPAddr{
         Port: UDP_PORT,
@@ -133,6 +137,21 @@ func (u *UDPHub) broadcastMaster(stop chan bool) {
             }
 
             time.Sleep(100 * time.Millisecond)
+        }
+    }
+}
+
+func (u *UDPHub) alertWhenMaster(alert chan<- bool) {
+    for {
+        found, _, err := u.findMaster(false)
+        if err != nil {
+            fmt.Printf("Some error %v, trying again\n", err)
+            continue
+        }
+        if !found {
+            fmt.Println("Master is dead!")
+            alert <- true
+            return
         }
     }
 }

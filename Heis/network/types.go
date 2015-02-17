@@ -12,11 +12,18 @@ const (
 type networkMessage struct {
 	Header int
 	Bool bool
+	ID int
 }
 
 // Declerations for networkMessage struct
+var (
+	ID_REQ_CONN   = 1
+	ID_REQ_ACCEPT = 2
+	ID_REQ_DENIED = 3
+)
+
 var (				
-	NM_REQ_CONN = &networkMessage{1, false}
-	NM_REQ_ACCE = &networkMessage{0, true}
-	NM_REQ_DENI = &networkMessage{0, false}
+	NM_REQ_CONN   = &networkMessage{ID_REQ_CONN,   false, -1}
+	NM_REQ_ACCEPT = &networkMessage{ID_REQ_ACCEPT, true,  -1}
+	NM_REQ_DENIED = &networkMessage{ID_REQ_DENIED, false, -1}
 )
