@@ -4,17 +4,23 @@ import (
 	"fmt"
 
 	"./driver"
-	"./network"
+	//"./network"
 )
 
 
 func main() {
 	fmt.Println("Start main!")
-	driver.Io_init()
+	if driver.Heis_init() {
+		fmt.Println("init success")
+	} else {
+		fmt.Println("init failed")
+	}
+	
+	/*
 	udp := network.NewUDPHub()
 	if found, _ := udp.FindMaster(); found {
 		fmt.Println("Found master!")
 	} else {
 		fmt.Println("Did not find master!")
-	}
+	}*/
 }
