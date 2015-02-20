@@ -15,7 +15,8 @@ func main() {
 	
 	laddr, _ := net.ResolveUDPAddr("udp", "localhost:20011")
 	ln, _ := net.ListenUDP("udp", laddr)
-
+	
+	// listen for primal
 	for searching {
 		timeout := make(chan bool)
 		connection := make(chan bool)
@@ -40,6 +41,7 @@ func main() {
 		}
 	}
 	
+	// create secondary
 	cmd := exec.Command("gnome-terminal", "-e", "./counter")
 	cmd.Output()
 	
@@ -47,6 +49,7 @@ func main() {
 	conn, _ := net.DialUDP("udp", nil, raddr)
 	defer conn.Close()
 	
+	// continue as primal
 	for {
 		fmt.Printf("Count: %v\n", count)
 		fmt.Fprintf(conn, strconv.Itoa(count))
