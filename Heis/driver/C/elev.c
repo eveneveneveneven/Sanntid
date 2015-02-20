@@ -10,6 +10,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 // Number of signals and lamps on a per-floor basis (excl sensor)
 #define N_BUTTONS 3
@@ -68,12 +69,14 @@ void elev_set_speed(int speed){
 		io_set_bit(MOTORDIR);
 		
 	// If to stop (speed == 0)
-	else if (last_speed < 0)
-		io_clear_bit(MOTORDIR);
-	else if (last_speed > 0)
-		io_set_bit(MOTORDIR);
-		
-	last_speed = speed ;
+	else {
+		if (last_speed < 0)
+			io_clear_bit(MOTORDIR);
+		else if (last_speed > 0)
+			io_set_bit(MOTORDIR);
+		usleep(5000);
+	}	
+	last_speed = speed;
 	
 	// Write new setting to motor.
 	io_write_analog(MOTOR, 2048 + 4*abs(speed));

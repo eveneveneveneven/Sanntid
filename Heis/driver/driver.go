@@ -25,19 +25,19 @@ func Heis_set_speed(speed int) {
 	C.elev_set_speed(C.int(speed))
 }
 
-func Heis_get_floor_sensor_signal() int {
+func Heis_get_floor() int {
 	return int(C.elev_get_floor_sensor_signal())
 }
 
-func Heis_get_button_signal(button Heis_button_press, floor int) int {
+func Heis_get_button(button Heis_button_press, floor int) int {
 	return int(C.elev_get_button_signal(C.elev_button_type_t(button), C.int(floor)))
 }
 
-func Heis_stop_signal() bool {
+func Heis_stop() bool {
 	return int(C.elev_get_stop_signal()) != 0
 }
 
-func Heis_obstruction_signal() bool {
+func Heis_obstruction() bool {
 	return int(C.elev_get_obstruction_signal()) != 0
 }
 
@@ -56,16 +56,3 @@ func Heis_set_stop_lamp(value int) {
 func Heis_set_door_open_lamp(value int) {
 	C.elev_set_door_open_lamp(C.int(value))
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
