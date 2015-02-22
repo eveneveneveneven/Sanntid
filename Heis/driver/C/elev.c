@@ -10,6 +10,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 // Number of signals and lamps on a per-floor basis (excl sensor)
 #define N_BUTTONS 3
@@ -54,6 +55,31 @@ int elev_init(void) {
 
     // Return success.
     return 1;
+}
+
+void elev_set_speed(int speed){
+	// In order to sharply stop the elevator, the direction bit is toggled
+	// before setting speed to zero.
+	static int last_speed = 0;
+	
+	// If to start (speed > 0)
+	if (speed > 0)
+		io_clear_bit(MOTORDIR);
+	else if (speed < 0)
+		io_set_bit(MOTORDIR);
+		
+	// If to stop (speed == 0)
+	else {
+		if (last_speed < 0)
+			io_clear_bit(MOTORDIR);
+		else if (last_speed > 0)
+			io_set_bit(MOTORDIR);
+		usleep(5000);
+	}	
+	last_speed = speed;
+	
+	// Write new setting to motor.
+	io_write_analog(MOTOR, 2048 + 4*abs(speed));
 }
 
 void elev_set_motor_direction(elev_motor_direction_t dirn) {
@@ -144,3 +170,4 @@ void elev_set_button_lamp(elev_button_type_t button, int floor, int value) {
     else
         io_clear_bit(lamp_channel_matrix[floor][button]);
 }
+

@@ -66,6 +66,7 @@ func (h *Hub) Run() {
 
 func (h *Hub) becomeMaster() {
 	fmt.Println("Becoming Master")
+	h.master = true
 	go h.udp.broadcastMaster(h.stop)
 	go h.tcp.startMasterServer(h.stop)
 }
@@ -85,15 +86,11 @@ func (h *Hub) resolveMasterNetwork() (bool, error) {
 			return false, errors.New("Refused connection to network")
 		}
 
-		h.master = false
-		h.id = id
 		fmt.Printf("Got ID %v\n", id)
-
+		h.id = id
 		return false, nil
 	} else {
-		h.master = true
 		h.id = 0
-
 		return true, nil
 	}
 }
