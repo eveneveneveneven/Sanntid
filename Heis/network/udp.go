@@ -68,7 +68,7 @@ func (u *UDPHub) findMaster(report bool) (bool, string, error) {
     // A timeout function which ends the search after 0.3 second
     timeout := make(chan bool)
     go func() {
-    	time.Sleep(300 * time.Millisecond)
+    	time.Sleep(400 * time.Millisecond)
     	timeout <- true
         searching = false
     }()
@@ -149,7 +149,6 @@ func (u *UDPHub) alertWhenMaster(alert chan<- bool) {
             continue
         }
         if !found {
-            fmt.Println("Master is dead!")
             alert <- true
             return
         }
