@@ -2,24 +2,36 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"./driver"
-	"./network"
+	//"./network"
 )
 
 
 func main() {
 	fmt.Println("Start main!")
-	driver.Io_init()
-	
-	stop := make(chan bool)
-	hub := network.NewHub()
-	becameMaster, _ := hub.ResolveMasterNetwork(stop)
-	if becameMaster {
-		fmt.Println("I am Master!")
+	if driver.Heis_init() {
+		fmt.Println("init success")
 	} else {
-		fmt.Println("I am a slave...")
+		fmt.Println("init failed")
 	}
-	select {}
-	fmt.Println("Ending program")
+	
+	for i := 0; i < 3; i++ {
+		driver.Heis_set_speed(300)
+		for driver.Heis_get_floor() != 1 {}
+		
+		driver.Heis_set_speed(-300)
+		for driver.Heis_get_floor() != 0 {}
+	}
+	
+	driver.Heis_set_speed(0)
+	select{}
+	/*
+	udp := network.NewUDPHub()
+	if found, _ := udp.FindMaster(); found {
+		fmt.Println("Found master!")
+	} else {
+		fmt.Println("Did not find master!")
+	}*/
 }
