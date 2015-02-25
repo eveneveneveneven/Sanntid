@@ -10,10 +10,10 @@ type Hub struct {
 	master bool
 
 	udp *UDPHub
-	tcp *TCPHub
+	cm  *connManager
 
 	missingMaster chan bool
-	stop chan bool
+	stop          chan bool
 }
 
 func NewHub() *Hub {
@@ -22,16 +22,16 @@ func NewHub() *Hub {
 	h.master = false
 
 	h.udp = newUDPHub()
-	h.tcp = newTCPHub()
+	h.cm = newConnManager()
 
 	h.missingMaster = make(chan bool)
-	h.stop = make(chan bool, 2)
 
 	return &h
 }
 
 func (h *Hub) Run() {
-	err := h.resolveMasterNetwork()
+	go h.cm.run()
+	newMaster, err := h.resolveMasterNetwork()
 	if err != nil {
 		fmt.Printf("Some error %v, exit program\n", err)
 		os.Exit(1)
@@ -60,14 +60,14 @@ func (h *Hub) becomeMaster() {
 	go h.tcp.startMasterServer(h.stop)
 }
 
-func (h *Hub) resolveMasterNetwork() error {
-	found, masterIP, err := h.udp.findMaster(true);
+func (h *Hub) resolveMasterNetwork() (bool, error) {
+	found, masterIP, err := h.udp.findMaster(true)
 	if err != nil {
 		return err
 	}
 
 	if found {
-		ok, err := h.tcp.requestConnToNetwork(masterIP)
+		ok, id, err := h.tcp.connectToNetwork(masterIP)
 		if err != nil {
 			return err
 		}
