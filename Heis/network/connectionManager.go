@@ -1,15 +1,15 @@
 package network
 
 import (
+	"fmt"
 	"net"
 	"sync"
-	"fmt"
 )
 
 type connManager struct {
 	masterIP string
-	currId   uint
-	conns   map[*net.TCPConn]uint
+	currId   int
+	conns    map[*net.TCPConn]int
 
 	wakeRecieve chan *networkMessage
 	wakeSend    chan *networkMessage
@@ -27,7 +27,7 @@ func NewConnManager(hbRec, hbSend chan *networkMessage) *connManager {
 
 	cm.masterIP = ""
 	cm.currId = 1
-	cm.conns = make(map[*net.TCPConn]uint)
+	cm.conns = make(map[*net.TCPConn]int)
 
 	cm.wakeRecieve = make(chan *networkMessage, 20) // buffer for messages recieved
 	cm.wakeSend = make(chan *networkMessage)
@@ -65,11 +65,13 @@ func (cm *connManager) run() {
 			cm.hubRecieve <- recieveMsg
 		case sendMsg := <-cm.hubSend:
 			numConns := len(cm.conns)
-			cm.wg.Add(numConns)
-			for i := 0; i < numConns; i++ {
-				cm.wakeRecieve <- sendMsg
+			if numConns > 0 {
+				cm.wg.Add(numConns)
+				for i := 0; i < numConns; i++ {
+					cm.wakeRecieve <- sendMsg
+				}
+				cm.wg.Wait()
 			}
-			cm.wg.Wait()
 		}
 	}
 }
