@@ -198,7 +198,6 @@ func get_stop() {
 			Heis_set_stop_lamp(1)
 			stop_all()
 		}
-
 		time.Sleep(time.Millisecond * 10)
 	}
 }
@@ -227,7 +226,7 @@ func set_lights(current_floor int) {
 	}
 }
 func Internal() {
-	// Initialize
+	// Init
 	speed = 150
 	orders := Init_orders()
 	queue := get_queue(orders)
