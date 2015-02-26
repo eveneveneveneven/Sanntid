@@ -23,7 +23,6 @@ func readFromTCPConn(conn *net.TCPConn, recieve chan *networkMessage, stop chan 
 
 func sendToTCPConn(conn *net.TCPConn, msg *networkMessage) error {
 	encoder := gob.NewEncoder(conn)
-	msg := NM_REQ_ACCEPT
 	if err := encoder.Encode(msg); err != nil {
 		return err
 	}
@@ -36,6 +35,7 @@ func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *networkMess
 	go readFromTCPConn(conn, recieve, stop)
 	numErrorSend := 0
 	for {
+		// prioritized channel to check
 		select {
 		case <-stop:
 			connEnd <- conn
@@ -62,13 +62,15 @@ func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *networkMess
 					wg.Done()
 					return
 				}
+			} else {
+				numErrorSend = 0
 			}
 			wg.Done()
 		}
 	}
 }
 
-func (t *TCPHub) startMasterServer(stop <-chan bool) {
+func startTCPListener(newConn chan *net.TCPConn) {
 	laddr := &net.TCPAddr{
 		Port: TCP_PORT,
 		IP:   net.ParseIP("localhost"),
@@ -81,21 +83,14 @@ func (t *TCPHub) startMasterServer(stop <-chan bool) {
 	}
 	defer ln.Close()
 
-    go func() {
-		for {
-			t.wg.Wait()
-			t.wg.Add(t.numSlaves)
+	for {
+		conn, err := ln.AcceptTCP()
+		if err != nil {
+			fmt.Printf("Some error %v, continue listening\n", err)
+			continue
 		}
-	}()
-
-    for {
-    	conn, err := ln.AcceptTCP()
-	    if err != nil {
-	        fmt.Printf("Some error %v, continue listening\n", err)
-	        continue
-	    }
-	    go t.handleSlaveConnection(conn)
-    }
+		newConn <- conn
+	}
 }
 
 func createConnTCP(ip string) (*net.TCPConn, error) {

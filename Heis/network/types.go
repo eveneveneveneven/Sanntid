@@ -14,9 +14,3 @@ type networkMessage struct {
 	Bool   bool
 	ID     int
 }
-
-var (
-	NM_REQ_CONN   = &networkMessage{ID_REQ_CONN, false, -1}
-	NM_REQ_ACCEPT = &networkMessage{ID_REQ_ACCEPT, true, -1}
-	NM_REQ_DENIED = &networkMessage{ID_REQ_DENIED, false, -1}
-)
