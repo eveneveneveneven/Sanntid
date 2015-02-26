@@ -54,18 +54,19 @@ func remove_from_orders(orders [][]int, current_order int) [][]int {
 			orders[current_order][i] = 0
 		}
 	}
+	set_external_lights(orders)
+	set_internal_lights(orders)
 	return orders
 }
 func Send_to_floor(queue []int, orders [][]int) ([]int, [][]int) {
 	for i := 0; i < 4; i++ {
-		current_order := queue[i]
+		current_order := queue[0]
 		current_floor := Heis_get_floor()
 		if current_order == -1 {
 			Heis_set_speed(0)
 		}
 		if current_floor == -1 {
-			time.Sleep(time.Millisecond * 1000)
-			To_nearest_floor()
+			stop_all()
 		}
 		if Heis_get_floor() != -1 && current_order != -1 {
 			Print("Current floor: ")
@@ -77,16 +78,13 @@ func Send_to_floor(queue []int, orders [][]int) ([]int, [][]int) {
 			open_doors()
 			queue = remove_from_queue(queue)
 			orders = remove_from_orders(orders, current_order)
-			//Print(queue)
 			current_order = -1
-			set_lights(current_floor)
 		}
 		if current_order > current_floor && current_order != -1 {
 			Heis_set_speed(speed)
 			for {
 				if Heis_get_floor() == current_order {
 					Heis_set_speed(0)
-					set_lights(current_order)
 					Print("Arrived at floor: ")
 					Println(current_order + 1)
 					open_doors()
@@ -101,7 +99,6 @@ func Send_to_floor(queue []int, orders [][]int) ([]int, [][]int) {
 			for {
 				if Heis_get_floor() == current_order {
 					Heis_set_speed(0)
-					set_lights(current_order)
 					Print("Arrived at floor: ")
 					Println(current_order + 1)
 					open_doors()
@@ -140,26 +137,22 @@ func get_orders(orders [][]int) {
 
 			if floor != 3 {
 				if Heis_get_button(BUTTON_CALL_UP, floor) == 1 {
-					//Println("External call up button nr: " + Itoa(floor) + " has been pressed!")
-					Heis_set_button_lamp(BUTTON_CALL_UP, floor, 1)
 					orders[floor][BUTTON_CALL_UP] = 1
 
 				}
 			}
 			if Heis_get_button(BUTTON_COMMAND, floor) == 1 {
-				//Println("Internal button nr: " + Itoa(floor) + " has been pressed!")
-				Heis_set_button_lamp(BUTTON_COMMAND, floor, 1)
 				orders[floor][BUTTON_COMMAND] = 1
 			}
 			if floor != 0 {
 				if Heis_get_button(BUTTON_CALL_DOWN, floor) == 1 {
-					//Println("External call down button nr: " + Itoa(floor) + " has been pressed!")
-					Heis_set_button_lamp(BUTTON_CALL_DOWN, floor, 1)
 					orders[floor][BUTTON_CALL_DOWN] = 1
 
 				}
 			}
 		}
+		set_internal_lights(orders)
+		set_external_lights(orders)
 	}
 }
 
@@ -210,19 +203,19 @@ func stop_all() {
 	Heis_init()
 }
 
-func set_lights(current_floor int) {
-	if current_floor == 0 {
-		Heis_set_button_lamp(BUTTON_CALL_UP, current_floor, 0)
-		Heis_set_button_lamp(BUTTON_COMMAND, current_floor, 0)
+func set_internal_lights(orders [][]int) {
+	for i := 0; i < 4; i++ {
+		if i != 3 {
+			Heis_set_button_lamp(BUTTON_CALL_UP, i, orders[i][0])
+		}
+		if i != 0 {
+			Heis_set_button_lamp(BUTTON_CALL_DOWN, i, orders[i][1])
+		}
 	}
-	if current_floor == 3 {
-		Heis_set_button_lamp(BUTTON_CALL_DOWN, current_floor, 0)
-		Heis_set_button_lamp(BUTTON_COMMAND, current_floor, 0)
-	}
-	if current_floor == 2 || current_floor == 1 {
-		Heis_set_button_lamp(BUTTON_CALL_UP, current_floor, 0)
-		Heis_set_button_lamp(BUTTON_CALL_DOWN, current_floor, 0)
-		Heis_set_button_lamp(BUTTON_COMMAND, current_floor, 0)
+}
+func set_external_lights(orders [][]int) {
+	for i := 0; i < 4; i++ {
+		Heis_set_button_lamp(BUTTON_COMMAND, i, orders[i][2])
 	}
 }
 func Internal() {
