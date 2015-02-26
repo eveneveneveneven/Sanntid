@@ -19,26 +19,25 @@ type Hub struct {
 }
 
 func NewHub() *Hub {
-	var h Hub
+	return &Hub{
+		master: false,
+		id:     -1,
+		networkStatus: &networkMessage{
+			Id:     -1,
+			Status: "",
+			Orders: "",
+		},
 
-	h.master = false
-	h.id = -1
-	h.networkStatus = &networkMessage{
-		Id:     -1,
-		Status: "",
-		Orders: "",
+		foundMaster:   make(chan string),
+		missingMaster: make(chan bool),
+
+		messageRecieved: make(chan *networkMessage),
+		messageSend:     make(chan *networkMessage),
 	}
-
-	h.foundMaster = make(chan string)
-	h.missingMaster = make(chan bool)
-
-	h.messageRecieved = make(chan *networkMessage)
-	h.messageSend = make(chan *networkMessage)
-
-	return &h
 }
 
 func (h *Hub) Run() {
+	fmt.Println("Start network Hub!")
 	cm := NewConnManager(h.messageRecieved, h.messageSend)
 	go cm.run()
 	go startUDPListener(h.foundMaster, h.missingMaster)
@@ -52,7 +51,7 @@ func (h *Hub) Run() {
 				continue
 			}
 			if err := cm.connectToNetwork(masterIp); err != nil {
-				fmt.Printf("Some error %v, exit program\n", err)
+				fmt.Printf("Error |Hub.Run| [%v], exit program\n", err)
 				os.Exit(1)
 			}
 			connected = true
@@ -70,22 +69,24 @@ func (h *Hub) Run() {
 				fmt.Println("Master is dead, continue as slave...")
 				h.id--
 			}
+			connected = false
 		case msgRecieve := <-h.messageRecieved:
+			fmt.Printf("Recieved: %+v\n", msgRecieve)
 			h.parseMessage(msgRecieve)
 			h.messageSend <- h.getResponse()
 		}
 	}
 
-	timer := time.NewTimer(250 * time.Millisecond)
-	go startUDPBroadcast()
 	// Master loop
+	go startUDPBroadcast()
+	timer := time.NewTimer(SEND_INTERVAL * time.Millisecond)
 	for {
 		select {
 		case msgRecieve := <-h.messageRecieved:
 			h.parseMessage(msgRecieve)
 
 		case <-timer.C:
-			timer.Reset(250 * time.Millisecond)
+			timer.Reset(SEND_INTERVAL * time.Millisecond)
 			h.messageSend <- h.getNextMessage()
 		}
 	}

@@ -6,6 +6,9 @@ const (
 	TCP_PORT = 30011
 
 	MAXINT = ^int(0)
+
+	SEND_INTERVAL       = 250 // milliseconds
+	BUFFER_MSG_RECIEVED = 20
 )
 
 // Network structure for passing message between Master/slave

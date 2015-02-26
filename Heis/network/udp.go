@@ -21,13 +21,14 @@ func getLocalAddress() string {
 }
 
 func startUDPListener(foundMaster chan string, masterMissing chan bool) {
+	fmt.Println("\tStarting UDP listener!")
 	laddr := &net.UDPAddr{
 		Port: UDP_PORT,
 		IP:   net.ParseIP("localhost"),
 	}
 	ln, err := net.ListenUDP("udp", laddr)
 	if err != nil {
-		fmt.Println("Some error %v, exiting program\n")
+		fmt.Println("\tError |startUDPListener| [%v], exiting program\n")
 		os.Exit(1)
 	}
 	defer ln.Close()
@@ -37,7 +38,7 @@ func startUDPListener(foundMaster chan string, masterMissing chan bool) {
 		ln.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
 		n, _, err := ln.ReadFromUDP(p)
 		if err != nil {
-			fmt.Printf("Some error %v, continuing listening\n", err)
+			fmt.Printf("\tError |startUDPListener| [%v], continuing listening\n", err)
 			masterMissing <- true
 			continue
 		}
@@ -46,6 +47,7 @@ func startUDPListener(foundMaster chan string, masterMissing chan bool) {
 }
 
 func startUDPBroadcast() {
+	fmt.Println("\tStarting UDP broadcast!")
 	// Broadcast address
 	baddr := &net.UDPAddr{
 		Port: UDP_PORT,
@@ -53,7 +55,7 @@ func startUDPBroadcast() {
 	}
 	conn, err := net.DialUDP("udp", nil, baddr)
 	if err != nil {
-		fmt.Printf("Some error %v, exiting program\n", err)
+		fmt.Printf("\tError |startUDPBroadcast| [%v], exiting program\n", err)
 		os.Exit(1)
 	}
 	defer conn.Close()
@@ -62,7 +64,7 @@ func startUDPBroadcast() {
 	for {
 		fmt.Fprintf(conn, ip) // trick to send a message on the UDP network!
 		if err != nil {
-			fmt.Printf("Some error writing! %v\n", err)
+			fmt.Printf("\tError |startUDPBroadcast| [%v]\n", err)
 		}
 
 		time.Sleep(100 * time.Millisecond)

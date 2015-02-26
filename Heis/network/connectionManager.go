@@ -23,27 +23,25 @@ type connManager struct {
 }
 
 func NewConnManager(hbRec, hbSend chan *networkMessage) *connManager {
-	var cm connManager
+	return &connManager{
+		masterIP: "",
+		currId:   1,
+		conns:    make(map[*net.TCPConn]int),
 
-	cm.masterIP = ""
-	cm.currId = 1
-	cm.conns = make(map[*net.TCPConn]int)
+		wakeRecieve: make(chan *networkMessage, BUFFER_MSG_RECIEVED), // buffer for messages recieved
+		wakeSend:    make(chan *networkMessage),
+		newConn:     make(chan *net.TCPConn),
+		connEnd:     make(chan *net.TCPConn),
 
-	cm.wakeRecieve = make(chan *networkMessage, 20) // buffer for messages recieved
-	cm.wakeSend = make(chan *networkMessage)
-	cm.newConn = make(chan *net.TCPConn)
-	cm.connEnd = make(chan *net.TCPConn)
+		hubRecieve: hbRec,
+		hubSend:    hbSend,
 
-	cm.hubRecieve = hbRec
-	cm.hubSend = hbSend
-
-	var wg sync.WaitGroup
-	cm.wg = &wg
-
-	return &cm
+		wg: new(sync.WaitGroup),
+	}
 }
 
 func (cm *connManager) run() {
+	fmt.Println("\tStarting connection manager!")
 	go startTCPListener(cm.newConn)
 	for {
 		// prioritized channels to check
@@ -69,10 +67,12 @@ func (cm *connManager) run() {
 		case sendMsg := <-cm.hubSend:
 			numConns := len(cm.conns)
 			if numConns > 0 {
-				fmt.Println("Hubsend - NumConns: ", numConns)
 				cm.wg.Add(numConns)
-				for i := 0; i < numConns; i++ {
-					cm.wakeSend <- sendMsg
+				for i := 1; i <= numConns; i++ {
+					msgHolder := new(networkMessage)
+					*msgHolder = *sendMsg
+					msgHolder.Id = i
+					cm.wakeSend <- msgHolder
 				}
 				cm.wg.Wait()
 			}
@@ -81,8 +81,9 @@ func (cm *connManager) run() {
 }
 
 func (cm *connManager) connectToNetwork(masterIP string) error {
+	fmt.Printf("\tConnecting to network, Master ip:%v\n", masterIP)
 	cm.masterIP = masterIP
-	conn, err := createConnTCP(cm.masterIP)
+	conn, err := createTCPConn(cm.masterIP)
 	if err != nil {
 		return err
 	}
@@ -92,14 +93,14 @@ func (cm *connManager) connectToNetwork(masterIP string) error {
 }
 
 func (cm *connManager) addConnection(conn *net.TCPConn) {
-	fmt.Printf("Adding connection [%v] with id %v\n", conn, cm.currId)
+	fmt.Printf("\tAdding connection [%v] with id %v\n", conn, cm.currId)
 	cm.conns[conn] = cm.currId
 	cm.currId++
 }
 
 func (cm *connManager) removeConnection(conn *net.TCPConn) {
 	if removeId, ok := cm.conns[conn]; ok {
-		fmt.Printf("Removing connection [%v] with id %v\n", conn, removeId)
+		fmt.Printf("\tRemoving connection [%v] with id %v\n", conn, removeId)
 		delete(cm.conns, conn)
 		for conn, id := range cm.conns {
 			if id > removeId {
@@ -108,6 +109,7 @@ func (cm *connManager) removeConnection(conn *net.TCPConn) {
 		}
 		cm.currId--
 	} else {
-		fmt.Println("Did not find a connection to remove in the connection list.")
+		fmt.Println("\tError |cm.removeConnection|",
+			"[Did not find a connection to remove in the connection list]")
 	}
 }
