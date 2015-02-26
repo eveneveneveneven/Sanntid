@@ -198,6 +198,7 @@ func get_stop() {
 			Heis_set_stop_lamp(1)
 			stop_all()
 		}
+
 		time.Sleep(time.Millisecond * 10)
 	}
 }
