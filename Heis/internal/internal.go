@@ -218,7 +218,7 @@ func set_lights(current_floor int){
 		Heis_set_button_lamp(BUTTON_COMMAND, current_floor, 0)
 	}
 }
-func Internal(int_button, ext_button chan int, int_order, ext_order, direction chan string) {
+func Internal() {
 // Initialize
 	orders := Init_orders()
 	queue := get_queue(orders)

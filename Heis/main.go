@@ -2,8 +2,7 @@ package main
 
 import (
 	"fmt"
-	"time"
-
+	"./internal"
 	"./driver"
 	//"./network"
 )
@@ -16,17 +15,14 @@ func main() {
 	} else {
 		fmt.Println("init failed")
 	}
-	
-	for i := 0; i < 3; i++ {
-		driver.Heis_set_speed(300)
-		for driver.Heis_get_floor() != 1 {}
-		
-		driver.Heis_set_speed(-300)
-		for driver.Heis_get_floor() != 0 {}
-	}
-	
-	driver.Heis_set_speed(0)
-	select{}
+	int_button := make(chan int)
+	ext_button := make(chan int)
+	int_order := make(chan string)
+	ext_order := make(chan string)
+	direction := make(chan string)
+	go internal.Internal(int_button, ext_button, int_order, ext_order, direction)
+	neverQuit := make(chan string)
+	<-neverQuit
 	/*
 	udp := network.NewUDPHub()
 	if found, _ := udp.FindMaster(); found {
