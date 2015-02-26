@@ -2,15 +2,16 @@ package main
 
 import (
 	"fmt"
-	"time"
 
-	"./driver"
-	//"./network"
+	//"./driver"
+	"./network"
 )
 
 
 func main() {
 	fmt.Println("Start main!")
+
+	/*
 	if driver.Heis_init() {
 		fmt.Println("init success")
 	} else {
@@ -24,14 +25,11 @@ func main() {
 		driver.Heis_set_speed(-300)
 		for driver.Heis_get_floor() != 0 {}
 	}
-	
 	driver.Heis_set_speed(0)
+	*/
+
+	hub := network.NewHub()
+	go hub.Run()
+
 	select{}
-	/*
-	udp := network.NewUDPHub()
-	if found, _ := udp.FindMaster(); found {
-		fmt.Println("Found master!")
-	} else {
-		fmt.Println("Did not find master!")
-	}*/
 }

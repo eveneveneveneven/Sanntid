@@ -1,129 +1,106 @@
 package network
 
 import (
-	"net"
-	"fmt"
 	"encoding/gob"
+	"fmt"
+	"net"
 	"os"
+	"sync"
 )
 
-type TCPHub struct {
-	masterIP string
-	masterConn *net.TCPConn
-
-	numConns int
-	conns []*net.TCPConn
-}
-
-// Init of new TCPHub variable
-func newTCPHub() *TCPHub {
-	var t TCPHub
-
-	t.masterIP = ""
-	t.masterConn = nil
-
-	t.numConns = 0
-	t.conns = make([]*net.TCPConn, MAX_ELEVATORS)
-
-	return &t
-}
-
-func (t *TCPHub) handleConneciton(conn *net.TCPConn) {
+func readFromTCPConn(conn *net.TCPConn, recieve chan *networkMessage, stop chan bool) {
 	decoder := gob.NewDecoder(conn)
-	recMsg := &networkMessage{}
-	if err := decoder.Decode(recMsg); err != nil {
-		fmt.Printf("Some error %v\n", err)
-	    return 
+	for {
+		msg := &networkMessage{}
+		if err := decoder.Decode(msg); err != nil {
+			fmt.Printf("Some error %v\n", err)
+			stop <- true
+			return
+		}
+		recieve <- msg
 	}
+}
 
-	switch recMsg.Header {
-	case ID_REQ_CONN:
-		encoder := gob.NewEncoder(conn)
-		if t.numConns < MAX_ELEVATORS {
-			sendMsg := NM_REQ_ACCEPT
-			sendMsg.ID = t.numConns + 1
-			if err := encoder.Encode(sendMsg); err != nil {
-				fmt.Printf("Some error %v\n", err)
-			    return 
-			}
+func sendToTCPConn(conn *net.TCPConn, msg *networkMessage) error {
+	encoder := gob.NewEncoder(conn)
+	if err := encoder.Encode(msg); err != nil {
+		return err
+	}
+	return nil
+}
 
-			t.conns[t.numConns] = conn
-			t.numConns += 1
-		} else {
-			sendMsg := NM_REQ_DENIED
-			if err := encoder.Encode(sendMsg); err != nil {
-				fmt.Printf("Some error %v\n", err)
-			    return 
-			}
+func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *networkMessage, connEnd chan *net.TCPConn, wg *sync.WaitGroup) {
+	stop := make(chan bool)
+	recieve := make(chan *networkMessage)
+	go readFromTCPConn(conn, recieve, stop)
+	numErrorSend := 0
+	for {
+		// prioritized channel to check
+		select {
+		case <-stop:
+			connEnd <- conn
 			conn.Close()
+			return
+		default:
+		}
+
+		select {
+		case <-stop:
+			connEnd <- conn
+			conn.Close()
+			return
+		case recieveMsg := <-recieve:
+			wakeRecieve <- recieveMsg
+		case sendMsg := <-wakeSend:
+			if err := sendToTCPConn(conn, sendMsg); err != nil {
+				fmt.Printf("Some error %v\n", err)
+				numErrorSend++
+				if numErrorSend >= 5 {
+					fmt.Println("Failed to send msg 5 times, stops connection")
+					connEnd <- conn
+					conn.Close()
+					wg.Done()
+					return
+				}
+			} else {
+				numErrorSend = 0
+			}
+			wg.Done()
 		}
 	}
 }
 
-func (t *TCPHub) startMasterServer(stop <-chan bool) {
+func startTCPListener(newConn chan *net.TCPConn) {
 	laddr := &net.TCPAddr{
 		Port: TCP_PORT,
-		IP: net.ParseIP("localhost"),
+		IP:   net.ParseIP("localhost"),
 	}
 
 	ln, err := net.ListenTCP("tcp", laddr)
-    if err != nil {
-        fmt.Printf("Some error %v, quitting program\n", err)
-        os.Exit(1)
-    }
-    defer ln.Close()
+	if err != nil {
+		fmt.Printf("Some error %v, quitting program\n", err)
+		os.Exit(1)
+	}
+	defer ln.Close()
 
-    listening := true
-
-    go func(){
-    	<-stop
-    	listening = false
-    	ln.Close()
-    }()
-
-    for listening {
-    	conn, err := ln.AcceptTCP()
-	    if err != nil {
-	        fmt.Printf("Some error %v, continue listening\n", err)
-	        continue
-	    }
-	    go t.handleConneciton(conn)
-    }
+	for {
+		conn, err := ln.AcceptTCP()
+		if err != nil {
+			fmt.Printf("Some error %v, continue listening\n", err)
+			continue
+		}
+		newConn <- conn
+	}
 }
 
-// Asks found Master if it can connect to the network.
-// Connects itself to the network if approved,
-// else shuts program off (not needed/allowed).
-// Returns (isAllowed, ID, error)
-func (t *TCPHub) requestConnToNetwork(masterIP string) (bool, int, error) {
-	t.masterIP = masterIP
+func createConnTCP(ip string) (*net.TCPConn, error) {
 	raddr := &net.TCPAddr{
 		Port: TCP_PORT,
-		IP: net.ParseIP(t.masterIP),
+		IP:   net.ParseIP(ip),
 	}
 	conn, err := net.DialTCP("tcp", nil, raddr)
 	if err != nil {
-	    return false, -1, err
+		return nil, err
 	}
-
-	encoder := gob.NewEncoder(conn)
-	sendMsg := NM_REQ_CONN
-	if err := encoder.Encode(sendMsg); err != nil {
-	    return false, -1, err
-	}
-
-	decoder := gob.NewDecoder(conn)
-	recMsg  := &networkMessage{}
-	if err := decoder.Decode(recMsg); err != nil {
-	    return false, -1, err
-	}
-
-	if recMsg.Bool {
-		fmt.Println("Accepted connection to the network, begin transmition")
-		t.masterConn = conn
-		return true, recMsg.ID, nil
-	} else {
-		fmt.Println("Denied connection to the network, quit program")
-		return false, -1, nil
-	}
+	return conn, nil
 }

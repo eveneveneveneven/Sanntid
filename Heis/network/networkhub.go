@@ -8,56 +8,44 @@ import (
 
 type Hub struct {
 	master bool
-	id int // 0 equals master, else slave
-
-	numConns int
 
 	udp *UDPHub
-	tcp *TCPHub
+	cm  *connManager
 
 	missingMaster chan bool
-	stop chan bool
+	stop          chan bool
 }
 
 func NewHub() *Hub {
 	var h Hub
 
-	h.id       = -1
-	h.master   = false
-	h.numConns = 0
+	h.master = false
 
 	h.udp = newUDPHub()
-	h.tcp = newTCPHub()
+	h.cm = newConnManager()
 
 	h.missingMaster = make(chan bool)
-	h.stop = make(chan bool, 2)
 
 	return &h
 }
 
 func (h *Hub) Run() {
+	go h.cm.run()
 	newMaster, err := h.resolveMasterNetwork()
 	if err != nil {
 		fmt.Printf("Some error %v, exit program\n", err)
 		os.Exit(1)
 	}
 
-	if newMaster {
-		fmt.Println("I am Master!")
-		h.becomeMaster()
-	} else {
-		fmt.Println("I am a slave...")
-		go h.udp.alertWhenMaster(h.missingMaster)
-	}
-
 	for {
 		select {
 		case <-h.missingMaster:
-			if h.id == 1 {
+			fmt.Println("Master is dead")
+			h.tcp.id -= 1
+			if h.tcp.id == 0 {
 				h.becomeMaster()
 			} else {
-				h.id -= 1
-				h.udp.alertWhenMaster(h.missingMaster)
+				go h.udp.alertWhenMaster(h.missingMaster)
 			}
 		case <-h.stop:
 		}
@@ -67,30 +55,33 @@ func (h *Hub) Run() {
 func (h *Hub) becomeMaster() {
 	fmt.Println("Becoming Master")
 	h.master = true
+	h.tcp.id = 0
 	go h.udp.broadcastMaster(h.stop)
 	go h.tcp.startMasterServer(h.stop)
 }
 
 func (h *Hub) resolveMasterNetwork() (bool, error) {
-	found, masterIP, err := h.udp.findMaster(true);
+	found, masterIP, err := h.udp.findMaster(true)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	if found {
-		ok, id, err := h.tcp.requestConnToNetwork(masterIP)
+		ok, id, err := h.tcp.connectToNetwork(masterIP)
 		if err != nil {
-			return false, err
+			return err
 		}
 		if !ok {
-			return false, errors.New("Refused connection to network")
+			return errors.New("Refused connection to network")
 		}
+		fmt.Println("I am a slave...")
+		go h.udp.alertWhenMaster(h.missingMaster)
+		go h.tcp.startSlaveClient()
 
-		fmt.Printf("Got ID %v\n", id)
-		h.id = id
-		return false, nil
+		return nil
 	} else {
-		h.id = 0
-		return true, nil
+		h.becomeMaster()
+
+		return nil
 	}
 }
