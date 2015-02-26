@@ -5,7 +5,14 @@ import (
 	"time"
 )
 
+var speed int
 
+func open_doors(){
+	Heis_set_door_open_lamp(1)
+	time.Sleep(1000*time.Millisecond)
+	Heis_set_door_open_lamp(0)
+	return
+}
 func Init_orders() ([][]int){
 	orders := make([][]int, 5)
 	for i := 0; i < 5; i++ {
@@ -42,8 +49,10 @@ for i:=0; i<3; i++{
 	return queue
 }
 func remove_from_orders(orders [][]int, current_order int) ([][]int){
-	for i:=0; i<3; i++{
-		orders[current_order][i] = 0
+	if current_order !=-1 {
+		for i:=0; i<3; i++{
+			orders[current_order][i] = 0
+		}
 	}
 	return orders
 }
@@ -54,24 +63,33 @@ func Send_to_floor(queue []int, orders[][]int) ([]int, [][]int) {
 		if current_order==-1{
 			Heis_set_speed(0)
 		}
+		if current_floor == -1 {
+			time.Sleep(time.Millisecond*1000)
+			To_nearest_floor()
+		}
 		if Heis_get_floor() != -1 && current_order !=-1{
 			Print("Current floor: ")
 			Println(current_floor + 1)			
 			Print("Going to: Floor ")
 			Println(current_order + 1)
 		}
-		if current_order==current_floor {
-			Heis_set_speed(0)
+		if current_order==current_floor && current_order != -1{
+			open_doors()
+			queue = remove_from_queue(queue)
+			orders = remove_from_orders(orders, current_order)
+			//Print(queue)
+			current_order = -1
 			set_lights(current_floor)
 		}
 		if current_order>current_floor && current_order != -1{
-			Heis_set_speed(150)
+			Heis_set_speed(speed)
 			for {
 				if Heis_get_floor() == current_order {
 					Heis_set_speed(0)
 					set_lights(current_order)
 					Print("Arrived at floor: ")
 					Println(current_order + 1)
+					open_doors()
 					queue = remove_from_queue(queue)
 					orders = remove_from_orders(orders, current_order)
 					return queue, orders
@@ -79,13 +97,14 @@ func Send_to_floor(queue []int, orders[][]int) ([]int, [][]int) {
 			}
 		}
 		if current_order<current_floor && current_order != -1{
-			Heis_set_speed(-150)		
+			Heis_set_speed(-speed)		
 			for {
 				if Heis_get_floor() == current_order {
 				Heis_set_speed(0)
 				set_lights(current_order)
 				Print("Arrived at floor: ")
 				Println(current_order + 1)
+				open_doors()
 				queue = remove_from_queue(queue)
 				orders = remove_from_orders(orders, current_order)
 				return queue, orders
@@ -155,7 +174,7 @@ func Floor_indicator() {
 			Heis_set_floor_indicator(floor)
 			//time.Sleep(50 * time.Millisecond)
 		}
-		time.Sleep(25 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
@@ -174,10 +193,11 @@ func Floor_indicator() {
 func To_nearest_floor() {
 	for {
 		
-		Heis_set_speed(-150)
+		Heis_set_speed(-speed)
 		if Heis_get_floor() == 0 {
 			Heis_set_speed(0)
-			return
+		
+	return
 		}
 		if Heis_get_floor() != -1 {
 			Heis_set_speed(0)
@@ -185,7 +205,7 @@ func To_nearest_floor() {
 		}
 	}
 }
-/*func get_stop(){
+func get_stop(){
 	for{
 		if Heis_stop(){
 			Heis_set_stop_lamp(1)
@@ -200,8 +220,9 @@ func stop_all(){
 	time.Sleep(time.Millisecond*1000)
 	Heis_set_stop_lamp(0)
 	To_nearest_floor()
+	Heis_init()
 }
-*/
+
 
 func set_lights(current_floor int){
 	if current_floor == 0 {
@@ -220,13 +241,14 @@ func set_lights(current_floor int){
 }
 func Internal() {
 // Initialize
+	speed = 150
 	orders := Init_orders()
 	queue := get_queue(orders)
 	Heis_init()
 	Heis_set_speed(0)
 	To_nearest_floor()
 	Heis_set_stop_lamp(0)
-	//go get_stop()
+	go get_stop()
 	go Floor_indicator()
 	go get_orders(orders)
 	//go Interpret_orders(orders)
@@ -238,6 +260,5 @@ func Internal() {
 		queue, orders = Send_to_floor(queue, orders)
 	}
 
-	neverQuit := make(chan string)
-	<-neverQuit
+	select{}
 }

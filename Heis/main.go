@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"./internal"
 	"./driver"
+	"runtime"
 	//"./network"
 )
 
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	fmt.Println("Start main!")
 	if driver.Heis_init() {
 		fmt.Println("init success")
@@ -16,8 +18,7 @@ func main() {
 		fmt.Println("init failed")
 	}
 	go internal.Internal()
-	neverQuit := make(chan string)
-	<-neverQuit
+	select{}
 	/*for i := 0; i < 3; i++ {
 		driver.Heis_set_speed(300)
 		for driver.Heis_get_floor() != 1 {}
