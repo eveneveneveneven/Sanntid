@@ -9,10 +9,10 @@ package driver
 */
 import "C"
 
-type Heis_button_press int
+type elev_button_type_t int
 
 const (
-	BUTTON_CALL_UP Heis_button_press = iota
+	BUTTON_CALL_UP elev_button_type_t = iota
 	BUTTON_CALL_DOWN
 	BUTTON_COMMAND
 )
@@ -29,7 +29,7 @@ func Heis_get_floor() int {
 	return int(C.elev_get_floor_sensor_signal())
 }
 
-func Heis_get_button(button Heis_button_press, floor int) int {
+func Heis_get_button(button elev_button_type_t, floor int) int {
 	return int(C.elev_get_button_signal(C.elev_button_type_t(button), C.int(floor)))
 }
 
@@ -45,7 +45,7 @@ func Heis_set_floor_indicator(floor int) {
 	C.elev_set_floor_indicator(C.int(floor))
 }
 
-func Heis_set_button_lamp(button Heis_button_press, floor int, value int) {
+func Heis_set_button_lamp(button elev_button_type_t, floor int, value int) {
 	C.elev_set_button_lamp(C.elev_button_type_t(button), C.int(floor), C.int(value))
 }
 

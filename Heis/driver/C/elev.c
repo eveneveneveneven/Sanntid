@@ -74,7 +74,7 @@ void elev_set_speed(int speed){
 			io_clear_bit(MOTORDIR);
 		else if (last_speed > 0)
 			io_set_bit(MOTORDIR);
-		usleep(5000);
+		usleep(16000);
 	}	
 	last_speed = speed;
 	
