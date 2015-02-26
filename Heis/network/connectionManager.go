@@ -37,6 +37,9 @@ func NewConnManager(hbRec, hbSend chan *networkMessage) *connManager {
 	cm.hubRecieve = hbRec
 	cm.hubSend = hbSend
 
+	var wg sync.WaitGroup
+	cm.wg = &wg
+
 	return &cm
 }
 
@@ -66,9 +69,10 @@ func (cm *connManager) run() {
 		case sendMsg := <-cm.hubSend:
 			numConns := len(cm.conns)
 			if numConns > 0 {
+				fmt.Println("Hubsend - NumConns: ", numConns)
 				cm.wg.Add(numConns)
 				for i := 0; i < numConns; i++ {
-					cm.wakeRecieve <- sendMsg
+					cm.wakeSend <- sendMsg
 				}
 				cm.wg.Wait()
 			}
@@ -88,12 +92,14 @@ func (cm *connManager) connectToNetwork(masterIP string) error {
 }
 
 func (cm *connManager) addConnection(conn *net.TCPConn) {
+	fmt.Printf("Adding connection [%v] with id %v\n", conn, cm.currId)
 	cm.conns[conn] = cm.currId
 	cm.currId++
 }
 
 func (cm *connManager) removeConnection(conn *net.TCPConn) {
 	if removeId, ok := cm.conns[conn]; ok {
+		fmt.Printf("Removing connection [%v] with id %v\n", conn, removeId)
 		delete(cm.conns, conn)
 		for conn, id := range cm.conns {
 			if id > removeId {

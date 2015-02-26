@@ -8,12 +8,11 @@ import (
 	"sync"
 )
 
-func readFromTCPConn(conn *net.TCPConn, recieve chan *networkMessage, stop chan bool) {
-	decoder := gob.NewDecoder(conn)
+func readFromTCPConn(decoder *gob.Decoder, recieve chan *networkMessage, stop chan bool) {
 	for {
 		msg := &networkMessage{}
 		if err := decoder.Decode(msg); err != nil {
-			fmt.Printf("Some error %v\n", err)
+			fmt.Printf("readFromTCPConn: Some error %v\n", err)
 			stop <- true
 			return
 		}
@@ -21,8 +20,7 @@ func readFromTCPConn(conn *net.TCPConn, recieve chan *networkMessage, stop chan 
 	}
 }
 
-func sendToTCPConn(conn *net.TCPConn, msg *networkMessage) error {
-	encoder := gob.NewEncoder(conn)
+func sendToTCPConn(encoder *gob.Encoder, msg *networkMessage) error {
 	if err := encoder.Encode(msg); err != nil {
 		return err
 	}
@@ -30,9 +28,11 @@ func sendToTCPConn(conn *net.TCPConn, msg *networkMessage) error {
 }
 
 func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *networkMessage, connEnd chan *net.TCPConn, wg *sync.WaitGroup) {
+	encoder := gob.NewEncoder(conn)
+	decoder := gob.NewDecoder(conn)
 	stop := make(chan bool)
 	recieve := make(chan *networkMessage)
-	go readFromTCPConn(conn, recieve, stop)
+	go readFromTCPConn(decoder, recieve, stop)
 	numErrorSend := 0
 	for {
 		// prioritized channel to check
@@ -52,7 +52,7 @@ func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *networkMess
 		case recieveMsg := <-recieve:
 			wakeRecieve <- recieveMsg
 		case sendMsg := <-wakeSend:
-			if err := sendToTCPConn(conn, sendMsg); err != nil {
+			if err := sendToTCPConn(encoder, sendMsg); err != nil {
 				fmt.Printf("Some error %v\n", err)
 				numErrorSend++
 				if numErrorSend >= 5 {

@@ -44,13 +44,18 @@ func (h *Hub) Run() {
 	go startUDPListener(h.foundMaster, h.missingMaster)
 
 	// Slave loop
+	connected := false
 	for !h.master {
 		select {
 		case masterIp := <-h.foundMaster:
+			if connected {
+				continue
+			}
 			if err := cm.connectToNetwork(masterIp); err != nil {
 				fmt.Printf("Some error %v, exit program\n", err)
 				os.Exit(1)
 			}
+			connected = true
 		case <-h.missingMaster:
 			switch h.id {
 			case 1:
@@ -76,6 +81,8 @@ func (h *Hub) Run() {
 	// Master loop
 	for {
 		select {
+		case msgRecieve := <-h.messageRecieved:
+			h.parseMessage(msgRecieve)
 
 		case <-timer.C:
 			timer.Reset(250 * time.Millisecond)
@@ -90,9 +97,17 @@ func (h *Hub) parseMessage(msg *networkMessage) {
 }
 
 func (h *Hub) getResponse() *networkMessage {
-	return &networkMessage{}
+	return &networkMessage{
+		Id:     1,
+		Status: "yo",
+		Orders: "none",
+	}
 }
 
 func (h *Hub) getNextMessage() *networkMessage {
-	return &networkMessage{}
+	return &networkMessage{
+		Id:     1,
+		Status: "yoman",
+		Orders: "everything",
+	}
 }
