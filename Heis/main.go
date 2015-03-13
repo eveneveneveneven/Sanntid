@@ -12,9 +12,11 @@ import (
 func main() {
 	fmt.Println("Start main!")
 
-	statusConnector := make(chan *types.NetworkMessage)
-	oh := order_handler.NewOrderHandler(statusConnector)
-	hub := network.NewHub(statusConnector)
+	statusRecieve := make(chan *types.NetworkMessage)
+	statusSend := make(chan *types.NetworkMessage)
+	
+	oh := order_handler.NewOrderHandler(statusRecieve, statusSend)
+	hub := network.NewHub(statusRecieve, statusSend)
 
 	go oh.Run()
 	go hub.Run()

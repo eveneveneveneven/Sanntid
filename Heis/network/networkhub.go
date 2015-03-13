@@ -18,10 +18,12 @@ type Hub struct {
 
 	messageRecieved chan *types.NetworkMessage
 	messageSend     chan *types.NetworkMessage
-	statusConnector chan *types.NetworkMessage
+
+	statusRecieve chan *types.NetworkMessage
+	statusSend    chan *types.NetworkMessage
 }
 
-func NewHub(statConn chan *types.NetworkMessage) *Hub {
+func NewHub(statRec, statSend chan *types.NetworkMessage) *Hub {
 	return &Hub{
 		master: false,
 		id:     -1,
@@ -36,7 +38,9 @@ func NewHub(statConn chan *types.NetworkMessage) *Hub {
 
 		messageRecieved: make(chan *types.NetworkMessage),
 		messageSend:     make(chan *types.NetworkMessage),
-		statusConnector: statConn,
+
+		statusRecieve: statRec,
+		statusSend:    statSend,
 	}
 }
 
