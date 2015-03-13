@@ -1,96 +1,114 @@
 package network
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"time"
 )
 
 type Hub struct {
-	master bool
-	id int // 0 equals master, else slave
+	master        bool
+	id            int
+	networkStatus *networkMessage
 
-	numConns int
-
-	udp *UDPHub
-	tcp *TCPHub
-
+	foundMaster   chan string
 	missingMaster chan bool
-	stop chan bool
+
+	messageRecieved chan *networkMessage
+	messageSend     chan *networkMessage
 }
 
 func NewHub() *Hub {
-	var h Hub
+	return &Hub{
+		master: false,
+		id:     -1,
+		networkStatus: &networkMessage{
+			Id:     -1,
+			Status: "",
+			Orders: "",
+		},
 
-	h.id       = -1
-	h.master   = false
-	h.numConns = 0
+		foundMaster:   make(chan string),
+		missingMaster: make(chan bool),
 
-	h.udp = newUDPHub()
-	h.tcp = newTCPHub()
-
-	h.missingMaster = make(chan bool)
-	h.stop = make(chan bool, 2)
-
-	return &h
+		messageRecieved: make(chan *networkMessage),
+		messageSend:     make(chan *networkMessage),
+	}
 }
 
 func (h *Hub) Run() {
-	newMaster, err := h.resolveMasterNetwork()
-	if err != nil {
-		fmt.Printf("Some error %v, exit program\n", err)
-		os.Exit(1)
+	fmt.Println("Start network Hub!")
+	cm := NewConnManager(h.messageRecieved, h.messageSend)
+	go cm.run()
+	go startUDPListener(h.foundMaster, h.missingMaster)
+
+	// Slave loop
+	connected := false
+	for !h.master {
+		select {
+		case masterIp := <-h.foundMaster:
+			if connected {
+				continue
+			}
+			if err := cm.connectToNetwork(masterIp); err != nil {
+				fmt.Printf("Error |Hub.Run| [%v], exit program\n", err)
+				os.Exit(1)
+			}
+			connected = true
+		case <-h.missingMaster:
+			switch h.id {
+			case 1:
+				fmt.Println("Master is dead, I am Master!")
+				h.master = true
+				h.id = 0
+			case -1:
+				fmt.Println("There is no Master, claim Master!")
+				h.master = true
+				h.id = 0
+			default:
+				fmt.Println("Master is dead, continue as slave...")
+				h.id--
+			}
+			connected = false
+		case msgRecieve := <-h.messageRecieved:
+			fmt.Printf("Recieved: %+v\n", msgRecieve)
+			h.parseMessage(msgRecieve)
+			h.messageSend <- h.getResponse()
+		}
 	}
 
-	if newMaster {
-		fmt.Println("I am Master!")
-		h.becomeMaster()
-	} else {
-		fmt.Println("I am a slave...")
-		go h.udp.alertWhenMaster(h.missingMaster)
-	}
-
+	// Master loop
+	go startUDPBroadcast()
+	timer := time.NewTimer(SEND_INTERVAL * time.Millisecond)
 	for {
 		select {
-		case <-h.missingMaster:
-			if h.id == 1 {
-				h.becomeMaster()
-			} else {
-				h.id -= 1
-				h.udp.alertWhenMaster(h.missingMaster)
-			}
-		case <-h.stop:
+		case msgRecieve := <-h.messageRecieved:
+			h.parseMessage(msgRecieve)
+
+		case <-timer.C:
+			timer.Reset(SEND_INTERVAL * time.Millisecond)
+			h.messageSend <- h.getNextMessage()
 		}
 	}
 }
 
-func (h *Hub) becomeMaster() {
-	fmt.Println("Becoming Master")
-	h.master = true
-	go h.udp.broadcastMaster(h.stop)
-	go h.tcp.startMasterServer(h.stop)
+func (h *Hub) parseMessage(msg *networkMessage) {
+	h.id = msg.Id
+	h.networkStatus = msg
 }
 
-func (h *Hub) resolveMasterNetwork() (bool, error) {
-	found, masterIP, err := h.udp.findMaster(true);
-	if err != nil {
-		return false, err
+func (h *Hub) getResponse() *networkMessage {
+	return &networkMessage{
+		Id:     1,
+		Status: "yo",
+		Orders: "none",
 	}
+}
 
-	if found {
-		ok, id, err := h.tcp.requestConnToNetwork(masterIP)
-		if err != nil {
-			return false, err
-		}
-		if !ok {
-			return false, errors.New("Refused connection to network")
-		}
-
-		fmt.Printf("Got ID %v\n", id)
-		h.id = id
-		return false, nil
-	} else {
-		h.id = 0
-		return true, nil
+func (h *Hub) getNextMessage() *networkMessage {
+	return &networkMessage{
+		Id:     1,
+		Status: "yoman",
+		Orders: "everything",
 	}
 }

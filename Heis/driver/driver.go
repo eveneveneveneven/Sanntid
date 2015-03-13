@@ -1,4 +1,5 @@
 package driver
+
 /*
 #cgo LDFLAGS: -lcomedi -lm
 #include "C/channels.h"
