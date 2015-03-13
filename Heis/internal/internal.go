@@ -1,7 +1,9 @@
 package internal
 
 import (
-	"../cost"
+	//"../cost"
+	"../lights"
+	"../buttons"
 	. "../driver"
 	. "fmt"
 	"time"
@@ -12,7 +14,7 @@ var dir int
 var last_floor int
 var current_order int
 var queue = []int {-1, -1, -1, -1}
-var cost int
+var costs int
 
 func open_doors() {
 	Heis_set_door_open_lamp(1)
@@ -60,12 +62,13 @@ func remove_from_orders(orders [][]int, current_order int) [][]int {
 			orders[current_order][i] = 0
 		}
 	}
-	set_external_lights(orders)
-	set_internal_lights(orders)
+	lights.Set_external_lights(orders)
+	lights.Set_internal_lights(orders)
 	return orders
 }
 func Send_to_floor(orders [][]int) ([][]int) {
 	for i := 0; i < 4; i++ {
+		get_queue(orders)
 		current_order = queue[0]
 		current_floor := Heis_get_floor()
 		if current_order != -1 && current_order != current_floor{
@@ -84,10 +87,10 @@ func Send_to_floor(orders [][]int) ([][]int) {
 			Println(current_floor + 1)
 			Print("Going to: Floor ")
 			Println(current_order + 1)
+			Println(" ")
 		}
 		if current_order == current_floor && current_order != -1 {
 			open_doors()
-			Print_orders(orders)
 			queue = remove_from_queue(queue)
 			orders = remove_from_orders(orders, current_order)
 			current_order = -1
@@ -96,9 +99,6 @@ func Send_to_floor(orders [][]int) ([][]int) {
 		if current_order > current_floor && current_order != -1 {
 			Heis_set_speed(speed)
 			dir=1
-			Print_orders(orders)
-			queue = remove_from_queue(queue)
-			orders = remove_from_orders(orders, current_order)
 			for {
 				if Heis_get_floor() == current_order {
 					Heis_set_speed(0)
@@ -106,6 +106,9 @@ func Send_to_floor(orders [][]int) ([][]int) {
 					dir=0
 					Print("Arrived at floor: ")
 					Println(current_order + 1)
+					Println(" ")
+					queue = remove_from_queue(queue)
+					orders = remove_from_orders(orders, current_order)
 					open_doors()
 					current_order = -1
 					return orders
@@ -115,9 +118,6 @@ func Send_to_floor(orders [][]int) ([][]int) {
 		if current_order < current_floor && current_order != -1 {
 			Heis_set_speed(-speed)
 			dir=-1
-			Print_orders(orders)
-			queue = remove_from_queue(queue)
-			orders = remove_from_orders(orders, current_order)
 			for {
 				if Heis_get_floor() == current_order {
 					Heis_set_speed(0)
@@ -125,9 +125,10 @@ func Send_to_floor(orders [][]int) ([][]int) {
 					dir=0
 					Print("Arrived at floor: ")
 					Println(current_order + 1)
-					open_doors()
+					Println(" ")
 					queue = remove_from_queue(queue)
 					orders = remove_from_orders(orders, current_order)
+					open_doors()
 					current_order = -1
 					return orders
 				}
@@ -145,44 +146,10 @@ func get_queue(orders [][]int) {
 
 		if orders[i][0] == 1 || orders[i][1] == 1 || orders[i][2] == 1 {
 			queue[k] = i
-			//Println(i + 1)
 			k++
 		}
-
 	}
 }
-
-//Handles external button presses
-func get_orders(orders [][]int) {
-
-	for {
-		for floor := 0; floor < 4; floor++ {
-			if floor != 3 {
-				if Heis_get_button(BUTTON_CALL_UP, floor) == 1 && orders[floor][BUTTON_CALL_UP] != 1{
-					orders[floor][BUTTON_CALL_UP] = 1
-					cost = cost_function(orders)
-					Println("Order: Floor", floor+1, "   Cost: ", cost)
-				}
-			}
-			if Heis_get_button(BUTTON_COMMAND, floor) == 1 && orders[floor][BUTTON_CALL_UP] != 1{
-				orders[floor][BUTTON_COMMAND] = 1
-				cost = cost_function(orders)
-				Println("Order: Floor", floor+1, "   Cost: ", cost)
-			}
-			if floor != 0 {
-				if Heis_get_button(BUTTON_CALL_DOWN, floor) == 1 && orders[floor][BUTTON_CALL_UP] != 1{
-					orders[floor][BUTTON_CALL_DOWN] = 1
-					cost = cost_function(orders)
-					Println("Order: Floor", floor+1, "   Cost: ", cost)
-				}
-			}
-		}
-		set_internal_lights(orders)
-		set_external_lights(orders)
-		get_queue(orders)
-	}
-}
-
 //Checks which floor the elevator is on and sets the floor-light
 func Floor_indicator() {
 	Println("executing floor indicator!")
@@ -236,28 +203,6 @@ func stop_all() {
 	Heis_init()
 }
 
-func abs (value int) (int) {
-	if value<0 {
-		return -value
-	}
-	return value
-}
-
-func set_internal_lights(orders [][]int) {
-	for i := 0; i < 4; i++ {
-		if i != 3 {
-			Heis_set_button_lamp(BUTTON_CALL_UP, i, orders[i][0])
-		}
-		if i != 0 {
-			Heis_set_button_lamp(BUTTON_CALL_DOWN, i, orders[i][1])
-		}
-	}
-}
-func set_external_lights(orders [][]int) {
-	for i := 0; i < 4; i++ {
-		Heis_set_button_lamp(BUTTON_COMMAND, i, orders[i][2])
-	}
-}
 func Internal() {
 	// Init
 	speed = 150
@@ -271,9 +216,9 @@ func Internal() {
 
 	go get_stop()
 	go Floor_indicator()
-	go get_orders(orders)
 	for {
-		orders = Send_to_floor(orders)
+		orders = button_listener.Get_orders(orders, current_order)
+		Send_to_floor(orders)
 	}
 
 	select {}
