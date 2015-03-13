@@ -5,29 +5,18 @@ import (
 
 	//"./driver"
 	"./network"
+	"./order_handler"
+	"./types"
 )
 
 func main() {
 	fmt.Println("Start main!")
 
-	/*
-		if driver.Heis_init() {
-			fmt.Println("init success")
-		} else {
-			fmt.Println("init failed")
-		}
+	statusConnector := make(chan *types.NetworkMessage)
+	oh := order_handler.NewOrderHandler(statusConnector)
+	hub := network.NewHub(statusConnector)
 
-		for i := 0; i < 3; i++ {
-			driver.Heis_set_speed(300)
-			for driver.Heis_get_floor() != 1 {}
-
-			driver.Heis_set_speed(-300)
-			for driver.Heis_get_floor() != 0 {}
-		}
-		driver.Heis_set_speed(0)
-	*/
-
-	hub := network.NewHub()
+	go oh.Run()
 	go hub.Run()
 
 	select {}
