@@ -6,12 +6,14 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"../types"
 )
 
 // Finds the local IP address of the machine
 func getLocalAddress() string {
 	baddr := &net.UDPAddr{
-		Port: UDP_PORT,
+		Port: types.UDP_PORT,
 		IP:   net.IPv4bcast,
 	}
 	tempConn, _ := net.DialUDP("udp4", nil, baddr)
@@ -23,12 +25,12 @@ func getLocalAddress() string {
 func startUDPListener(foundMaster chan string, masterMissing chan bool) {
 	fmt.Println("\tStarting UDP listener!")
 	laddr := &net.UDPAddr{
-		Port: UDP_PORT,
+		Port: types.UDP_PORT,
 		IP:   net.ParseIP("localhost"),
 	}
 	ln, err := net.ListenUDP("udp", laddr)
 	if err != nil {
-		fmt.Println("\tError |startUDPListener| [%v], exiting program\n")
+		fmt.Println("\t\x1b[31;1mError\x1b[0m |startUDPListener| [%v], exiting program\n")
 		os.Exit(1)
 	}
 	defer ln.Close()
@@ -38,7 +40,7 @@ func startUDPListener(foundMaster chan string, masterMissing chan bool) {
 		ln.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
 		n, _, err := ln.ReadFromUDP(p)
 		if err != nil {
-			fmt.Printf("\tError |startUDPListener| [%v], continuing listening\n", err)
+			fmt.Printf("\t\x1b[31;1mError\x1b[0m |startUDPListener| [%v], continuing listening\n", err)
 			masterMissing <- true
 			continue
 		}
@@ -50,12 +52,12 @@ func startUDPBroadcast() {
 	fmt.Println("\tStarting UDP broadcast!")
 	// Broadcast address
 	baddr := &net.UDPAddr{
-		Port: UDP_PORT,
+		Port: types.UDP_PORT,
 		IP:   net.IPv4bcast,
 	}
 	conn, err := net.DialUDP("udp", nil, baddr)
 	if err != nil {
-		fmt.Printf("\tError |startUDPBroadcast| [%v], exiting program\n", err)
+		fmt.Printf("\t\x1b[31;1mError\x1b[0m |startUDPBroadcast| [%v], exiting program\n", err)
 		os.Exit(1)
 	}
 	defer conn.Close()
@@ -64,7 +66,7 @@ func startUDPBroadcast() {
 	for {
 		fmt.Fprintf(conn, ip) // trick to send a message on the UDP network!
 		if err != nil {
-			fmt.Printf("\tError |startUDPBroadcast| [%v]\n", err)
+			fmt.Printf("\t\x1b[31;1mError\x1b[0m |startUDPBroadcast| [%v]\n", err)
 		}
 
 		time.Sleep(100 * time.Millisecond)

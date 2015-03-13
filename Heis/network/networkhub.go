@@ -4,25 +4,28 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"../types"
 )
 
 type Hub struct {
 	master        bool
 	id            int
-	networkStatus *networkMessage
+	networkStatus *types.NetworkMessage
 
 	foundMaster   chan string
 	missingMaster chan bool
 
-	messageRecieved chan *networkMessage
-	messageSend     chan *networkMessage
+	messageRecieved chan *types.NetworkMessage
+	messageSend     chan *types.NetworkMessage
+	statusConnector chan *types.NetworkMessage
 }
 
-func NewHub() *Hub {
+func NewHub(statConn chan *types.NetworkMessage) *Hub {
 	return &Hub{
 		master: false,
 		id:     -1,
-		networkStatus: &networkMessage{
+		networkStatus: &types.NetworkMessage{
 			Id:     -1,
 			Status: "",
 			Orders: "",
@@ -31,8 +34,9 @@ func NewHub() *Hub {
 		foundMaster:   make(chan string),
 		missingMaster: make(chan bool),
 
-		messageRecieved: make(chan *networkMessage),
-		messageSend:     make(chan *networkMessage),
+		messageRecieved: make(chan *types.NetworkMessage),
+		messageSend:     make(chan *types.NetworkMessage),
+		statusConnector: statConn,
 	}
 }
 
@@ -51,7 +55,7 @@ func (h *Hub) Run() {
 				continue
 			}
 			if err := cm.connectToNetwork(masterIp); err != nil {
-				fmt.Printf("Error |Hub.Run| [%v], exit program\n", err)
+				fmt.Printf("\x1b[31;1mError\x1b[0m |Hub.Run| [%v], exit program\n", err)
 				os.Exit(1)
 			}
 			connected = true
@@ -79,34 +83,34 @@ func (h *Hub) Run() {
 
 	// Master loop
 	go startUDPBroadcast()
-	timer := time.NewTimer(SEND_INTERVAL * time.Millisecond)
+	timer := time.NewTimer(types.SEND_INTERVAL * time.Millisecond)
 	for {
 		select {
 		case msgRecieve := <-h.messageRecieved:
 			h.parseMessage(msgRecieve)
 
 		case <-timer.C:
-			timer.Reset(SEND_INTERVAL * time.Millisecond)
+			timer.Reset(types.SEND_INTERVAL * time.Millisecond)
 			h.messageSend <- h.getNextMessage()
 		}
 	}
 }
 
-func (h *Hub) parseMessage(msg *networkMessage) {
+func (h *Hub) parseMessage(msg *types.NetworkMessage) {
 	h.id = msg.Id
 	h.networkStatus = msg
 }
 
-func (h *Hub) getResponse() *networkMessage {
-	return &networkMessage{
+func (h *Hub) getResponse() *types.NetworkMessage {
+	return &types.NetworkMessage{
 		Id:     1,
 		Status: "yo",
 		Orders: "none",
 	}
 }
 
-func (h *Hub) getNextMessage() *networkMessage {
-	return &networkMessage{
+func (h *Hub) getNextMessage() *types.NetworkMessage {
+	return &types.NetworkMessage{
 		Id:     1,
 		Status: "yoman",
 		Orders: "everything",

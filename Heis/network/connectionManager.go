@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"sync"
+
+	"../types"
 )
 
 type connManager struct {
@@ -11,25 +13,26 @@ type connManager struct {
 	currId   int
 	conns    map[*net.TCPConn]int
 
-	wakeRecieve chan *networkMessage
-	wakeSend    chan *networkMessage
+	wakeRecieve chan *types.NetworkMessage
+	wakeSend    chan *types.NetworkMessage
 	newConn     chan *net.TCPConn
 	connEnd     chan *net.TCPConn
 
-	hubRecieve chan *networkMessage
-	hubSend    chan *networkMessage
+	hubRecieve chan *types.NetworkMessage
+	hubSend    chan *types.NetworkMessage
 
 	wg *sync.WaitGroup
 }
 
-func NewConnManager(hbRec, hbSend chan *networkMessage) *connManager {
+func NewConnManager(hbRec, hbSend chan *types.NetworkMessage) *connManager {
 	return &connManager{
 		masterIP: "",
 		currId:   1,
 		conns:    make(map[*net.TCPConn]int),
 
-		wakeRecieve: make(chan *networkMessage, BUFFER_MSG_RECIEVED), // buffer for messages recieved
-		wakeSend:    make(chan *networkMessage),
+		// buffer for messages recieved
+		wakeRecieve: make(chan *types.NetworkMessage, types.BUFFER_MSG_RECIEVED),
+		wakeSend:    make(chan *types.NetworkMessage),
 		newConn:     make(chan *net.TCPConn),
 		connEnd:     make(chan *net.TCPConn),
 
@@ -69,7 +72,7 @@ func (cm *connManager) run() {
 			if numConns > 0 {
 				cm.wg.Add(numConns)
 				for i := 1; i <= numConns; i++ {
-					msgHolder := new(networkMessage)
+					msgHolder := new(types.NetworkMessage)
 					*msgHolder = *sendMsg
 					msgHolder.Id = i
 					cm.wakeSend <- msgHolder
@@ -109,7 +112,7 @@ func (cm *connManager) removeConnection(conn *net.TCPConn) {
 		}
 		cm.currId--
 	} else {
-		fmt.Println("\tError |cm.removeConnection|",
+		fmt.Println("\t\t\x1b[31;1mError\x1b[0m |cm.removeConnection|",
 			"[Did not find a connection to remove in the connection list]")
 	}
 }
