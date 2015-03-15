@@ -5,10 +5,10 @@ import (
 )
 
 type OrderHandler struct {
-	networkStatus *types.NetworkMessage
+	networkStatus  *types.NetworkMessage
+	elevatorStatus *types.ElevatorStatus
 
-	networkRecieve chan *types.NetworkMessage // connection from network module
-	networkSend    chan *types.NetworkMessage // connection to network module
+	localConn chan *types.NetworkMessage // connection from network module
 
 	elevGoToFloor chan int // connection to elevator module
 	orderDone     chan int // connection from elevator module
@@ -17,12 +17,12 @@ type OrderHandler struct {
 	clearOrderLight chan int // connection to light module
 }
 
-func NewOrderHandler(statRec, statSend chan *types.NetworkMessage) *OrderHandler {
+func NewOrderHandler(lc chan *types.NetworkMessage) *OrderHandler {
 	return &OrderHandler{
-		networkStatus: new(types.NetworkMessage),
+		networkStatus:  new(types.NetworkMessage),
+		elevatorStatus: new(types.ElevatorStatus),
 
-		networkRecieve: statRec,
-		networkSend:    statSend,
+		localConn: lc,
 
 		elevGoToFloor: nil,
 		orderDone:     nil,
@@ -34,6 +34,17 @@ func NewOrderHandler(statRec, statSend chan *types.NetworkMessage) *OrderHandler
 
 func (oh *OrderHandler) Run() {
 	for {
-		select {}
+		select {
+		case networkUpdate := <-oh.localConn:
+			types.Clone(oh.networkStatus, networkUpdate)
+			response := &types.NetworkMessage{
+				Id:        -1,
+				Statuses:  make([]types.ElevatorStatus, 1),
+				Orders:    nil,
+				NewOrders: nil,
+			}
+			response.Statuses[0] = *oh.elevatorStatus
+			oh.localConn <- response
+		}
 	}
 }

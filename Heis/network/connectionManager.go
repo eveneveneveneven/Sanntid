@@ -8,13 +8,17 @@ import (
 	"../types"
 )
 
+type connection struct {
+	id      int
+	sendMsg chan *types.NetworkMessage
+}
+
 type connManager struct {
 	masterIP string
 	currId   int
-	conns    map[*net.TCPConn]int
+	conns    map[*net.TCPConn]*connection
 
 	wakeRecieve chan *types.NetworkMessage
-	wakeSend    chan *types.NetworkMessage
 	newConn     chan *net.TCPConn
 	connEnd     chan *net.TCPConn
 
@@ -28,11 +32,10 @@ func NewConnManager(hbRec, hbSend chan *types.NetworkMessage) *connManager {
 	return &connManager{
 		masterIP: "",
 		currId:   1,
-		conns:    make(map[*net.TCPConn]int),
+		conns:    make(map[*net.TCPConn]*connection),
 
 		// buffer for messages recieved
 		wakeRecieve: make(chan *types.NetworkMessage, types.BUFFER_MSG_RECIEVED),
-		wakeSend:    make(chan *types.NetworkMessage),
 		newConn:     make(chan *net.TCPConn),
 		connEnd:     make(chan *net.TCPConn),
 
@@ -54,7 +57,6 @@ func (cm *connManager) run() {
 			continue
 		case conn := <-cm.newConn:
 			cm.addConnection(conn)
-			go createTCPHandler(conn, cm.wakeRecieve, cm.wakeSend, cm.connEnd, cm.wg)
 			continue
 		default:
 		}
@@ -64,18 +66,17 @@ func (cm *connManager) run() {
 			cm.removeConnection(conn)
 		case conn := <-cm.newConn:
 			cm.addConnection(conn)
-			go createTCPHandler(conn, cm.wakeRecieve, cm.wakeSend, cm.connEnd, cm.wg)
 		case recieveMsg := <-cm.wakeRecieve:
 			cm.hubRecieve <- recieveMsg
 		case sendMsg := <-cm.hubSend:
 			numConns := len(cm.conns)
 			if numConns > 0 {
 				cm.wg.Add(numConns)
-				for i := 1; i <= numConns; i++ {
+				for _, c := range cm.conns {
 					msgHolder := new(types.NetworkMessage)
-					*msgHolder = *sendMsg
-					msgHolder.Id = i
-					cm.wakeSend <- msgHolder
+					types.Clone(msgHolder, sendMsg)
+					msgHolder.Id = c.id
+					c.sendMsg <- msgHolder
 				}
 				cm.wg.Wait()
 			}
@@ -91,23 +92,27 @@ func (cm *connManager) connectToNetwork(masterIP string) error {
 		return err
 	}
 	cm.addConnection(conn)
-	go createTCPHandler(conn, cm.wakeRecieve, cm.wakeSend, cm.connEnd, cm.wg)
 	return nil
 }
 
 func (cm *connManager) addConnection(conn *net.TCPConn) {
 	fmt.Printf("\tAdding connection [%v] with id %v\n", conn, cm.currId)
-	cm.conns[conn] = cm.currId
+	c := &connection{
+		id:      cm.currId,
+		sendMsg: make(chan *types.NetworkMessage),
+	}
+	cm.conns[conn] = c
 	cm.currId++
+	go createTCPHandler(conn, cm.wakeRecieve, c.sendMsg, cm.connEnd, cm.wg)
 }
 
 func (cm *connManager) removeConnection(conn *net.TCPConn) {
-	if removeId, ok := cm.conns[conn]; ok {
-		fmt.Printf("\tRemoving connection [%v] with id %v\n", conn, removeId)
+	if removeConn, ok := cm.conns[conn]; ok {
+		fmt.Printf("\tRemoving connection [%v] with id %v\n", conn, removeConn.id)
 		delete(cm.conns, conn)
-		for conn, id := range cm.conns {
-			if id > removeId {
-				cm.conns[conn]--
+		for conn, c := range cm.conns {
+			if c.id > removeConn.id {
+				cm.conns[conn].id--
 			}
 		}
 		cm.currId--

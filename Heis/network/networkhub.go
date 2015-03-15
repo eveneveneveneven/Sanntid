@@ -19,18 +19,18 @@ type Hub struct {
 	messageRecieved chan *types.NetworkMessage
 	messageSend     chan *types.NetworkMessage
 
-	statusRecieve chan *types.NetworkMessage
-	statusSend    chan *types.NetworkMessage
+	localConn chan *types.NetworkMessage
 }
 
-func NewHub(statRec, statSend chan *types.NetworkMessage) *Hub {
+func NewHub(lc chan *types.NetworkMessage) *Hub {
 	return &Hub{
 		master: false,
 		id:     -1,
 		networkStatus: &types.NetworkMessage{
-			Id:     -1,
-			Status: "",
-			Orders: "",
+			Id:        -1,
+			Statuses:  make([]types.ElevatorStatus, 10),
+			Orders:    make([]int, 6),
+			NewOrders: make([]int, 6),
 		},
 
 		foundMaster:   make(chan string),
@@ -39,8 +39,7 @@ func NewHub(statRec, statSend chan *types.NetworkMessage) *Hub {
 		messageRecieved: make(chan *types.NetworkMessage),
 		messageSend:     make(chan *types.NetworkMessage),
 
-		statusRecieve: statRec,
-		statusSend:    statSend,
+		localConn: lc,
 	}
 }
 
@@ -87,15 +86,16 @@ func (h *Hub) Run() {
 
 	// Master loop
 	go startUDPBroadcast()
-	timer := time.NewTimer(types.SEND_INTERVAL * time.Millisecond)
+	tick := time.Tick(types.SEND_INTERVAL * time.Millisecond)
 	for {
 		select {
-		case msgRecieve := <-h.messageRecieved:
-			h.parseMessage(msgRecieve)
-
-		case <-timer.C:
-			timer.Reset(types.SEND_INTERVAL * time.Millisecond)
-			h.messageSend <- h.getNextMessage()
+		case msgRec := <-h.messageRecieved:
+			h.parseMessage(msgRec)
+		case <-tick:
+			msg := h.getNextMessage()
+			h.messageSend <- msg
+			h.localConn <- msg
+			h.parseMessage(<-h.localConn)
 		}
 	}
 }
@@ -107,16 +107,18 @@ func (h *Hub) parseMessage(msg *types.NetworkMessage) {
 
 func (h *Hub) getResponse() *types.NetworkMessage {
 	return &types.NetworkMessage{
-		Id:     1,
-		Status: "yo",
-		Orders: "none",
+		Id:        1,
+		Statuses:  []types.ElevatorStatus{},
+		Orders:    []int{},
+		NewOrders: []int{},
 	}
 }
 
 func (h *Hub) getNextMessage() *types.NetworkMessage {
 	return &types.NetworkMessage{
-		Id:     1,
-		Status: "yoman",
-		Orders: "everything",
+		Id:        1,
+		Statuses:  []types.ElevatorStatus{},
+		Orders:    []int{1, 2},
+		NewOrders: []int{},
 	}
 }

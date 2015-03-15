@@ -12,14 +12,13 @@ import (
 func main() {
 	fmt.Println("Start main!")
 
-	statusRecieve := make(chan *types.NetworkMessage)
-	statusSend := make(chan *types.NetworkMessage)
-	
-	oh := order_handler.NewOrderHandler(statusRecieve, statusSend)
-	hub := network.NewHub(statusRecieve, statusSend)
+	c := make(chan *types.NetworkMessage)
 
-	go oh.Run()
-	go hub.Run()
+	orderHandler := order_handler.NewOrderHandler(c)
+	networkHub := network.NewHub(c)
+
+	go orderHandler.Run()
+	go networkHub.Run()
 
 	select {}
 }
