@@ -1,4 +1,4 @@
-package order_handler
+package order
 
 import (
 	"../types"
@@ -6,7 +6,7 @@ import (
 
 type OrderHandler struct {
 	networkStatus  *types.NetworkMessage
-	elevatorStatus *types.ElevatorStatus
+	elevatorStatus *types.ElevStat
 
 	localConn chan *types.NetworkMessage // connection from network module
 
@@ -20,7 +20,7 @@ type OrderHandler struct {
 func NewOrderHandler(lc chan *types.NetworkMessage) *OrderHandler {
 	return &OrderHandler{
 		networkStatus:  new(types.NetworkMessage),
-		elevatorStatus: new(types.ElevatorStatus),
+		elevatorStatus: new(types.ElevStat),
 
 		localConn: lc,
 
@@ -39,7 +39,7 @@ func (oh *OrderHandler) Run() {
 			types.Clone(oh.networkStatus, networkUpdate)
 			response := &types.NetworkMessage{
 				Id:        -1,
-				Statuses:  make([]types.ElevatorStatus, 1),
+				Statuses:  make([]types.ElevStat, 1),
 				Orders:    nil,
 				NewOrders: nil,
 			}

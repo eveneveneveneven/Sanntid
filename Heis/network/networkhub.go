@@ -9,9 +9,13 @@ import (
 )
 
 type Hub struct {
-	master        bool
-	id            int
+	master bool
+	id     int
+
+	becomeMaster chan bool
+
 	networkStatus *types.NetworkMessage
+	netMsgUpd     *types.NetworkMessage
 
 	foundMaster   chan string
 	missingMaster chan bool
@@ -19,19 +23,25 @@ type Hub struct {
 	messageRecieved chan *types.NetworkMessage
 	messageSend     chan *types.NetworkMessage
 
-	localConn chan *types.NetworkMessage
+	netStatNewMsg chan *types.NetworkMessage
+	netStatUpdate chan *types.NetworkMessage
 }
 
-func NewHub(lc chan *types.NetworkMessage) *Hub {
+func NewHub(becomeMaster chan bool,
+	netStatSend, netStatRec chan *types.NetworkMessage) *Hub {
 	return &Hub{
 		master: false,
 		id:     -1,
+
+		becomeMaster: becomeMaster,
+
 		networkStatus: &types.NetworkMessage{
 			Id:        -1,
-			Statuses:  make([]types.ElevatorStatus, 10),
+			Statuses:  make([]types.ElevStat, 10),
 			Orders:    make([]int, 6),
 			NewOrders: make([]int, 6),
 		},
+		netMsgUpd: new(types.NetworkMessage),
 
 		foundMaster:   make(chan string),
 		missingMaster: make(chan bool),
@@ -39,7 +49,8 @@ func NewHub(lc chan *types.NetworkMessage) *Hub {
 		messageRecieved: make(chan *types.NetworkMessage),
 		messageSend:     make(chan *types.NetworkMessage),
 
-		localConn: lc,
+		netStatNewMsg: netStatSend,
+		netStatUpdate: netStatRec,
 	}
 }
 
@@ -80,22 +91,24 @@ func (h *Hub) Run() {
 		case msgRecieve := <-h.messageRecieved:
 			fmt.Printf("Recieved: %+v\n", msgRecieve)
 			h.parseMessage(msgRecieve)
-			h.messageSend <- h.getResponse()
+		case netstatUpdate := <-h.netStatUpdate:
+			h.netMsgUpd = netstatUpdate
 		}
 	}
+
+	close(h.becomeMaster)
 
 	// Master loop
 	go startUDPBroadcast()
 	tick := time.Tick(types.SEND_INTERVAL * time.Millisecond)
 	for {
 		select {
+		case netStat := <-h.netStatUpdate:
+			h.networkStatus = netStat
 		case msgRec := <-h.messageRecieved:
-			h.parseMessage(msgRec)
+			h.netStatNewMsg <- msgRec
 		case <-tick:
-			msg := h.getNextMessage()
-			h.messageSend <- msg
-			h.localConn <- msg
-			h.parseMessage(<-h.localConn)
+			h.messageSend <- h.networkStatus
 		}
 	}
 }
@@ -103,22 +116,6 @@ func (h *Hub) Run() {
 func (h *Hub) parseMessage(msg *types.NetworkMessage) {
 	h.id = msg.Id
 	h.networkStatus = msg
-}
-
-func (h *Hub) getResponse() *types.NetworkMessage {
-	return &types.NetworkMessage{
-		Id:        1,
-		Statuses:  []types.ElevatorStatus{},
-		Orders:    []int{},
-		NewOrders: []int{},
-	}
-}
-
-func (h *Hub) getNextMessage() *types.NetworkMessage {
-	return &types.NetworkMessage{
-		Id:        1,
-		Statuses:  []types.ElevatorStatus{},
-		Orders:    []int{1, 2},
-		NewOrders: []int{},
-	}
+	h.netStatNewMsg <- msg
+	h.messageSend <- h.netMsgUpd
 }

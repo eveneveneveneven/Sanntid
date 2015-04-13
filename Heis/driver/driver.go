@@ -1,5 +1,7 @@
 package driver
 
+import "../types"
+
 /*
 #cgo LDFLAGS: -lcomedi -lm
 #include "C/channels.h"
@@ -9,14 +11,6 @@ package driver
 #include "C/elev.c"
 */
 import "C"
-
-type elev_button_type_t int
-
-const (
-	BUTTON_CALL_UP elev_button_type_t = iota
-	BUTTON_CALL_DOWN
-	BUTTON_COMMAND
-)
 
 func Heis_init() bool {
 	return int(C.elev_init()) != 0
