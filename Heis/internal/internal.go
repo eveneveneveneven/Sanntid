@@ -60,7 +60,6 @@ func To_nearest_floor() {
 		}
 	}
 }
-
 func get_input() {
 	reader := bufio.NewReader(os.Stdin) 
 	costs := 0
