@@ -7,28 +7,32 @@ import (
 type OrderHandler struct {
 	currNetwork *types.NetworkMessage
 
-	becomeMaster chan bool
-
 	netstatCurrentNetwork <-chan *types.NetworkMessage
 
-	elevGiveNewObj  chan<- *types.Order
-	elevObjComplete <-chan *types.Order
+	elevGiveNewObj chan<- *types.Order
 }
 
-func NewOrderHandler(becomeMaster chan bool, netstatCurrNet chan *types.NetworkMessage,
-	elevNewObj, elevObjComp chan *types.Order) *OrderHandler {
+func NewOrderHandler(netstatCurrNet chan *types.NetworkMessage,
+	elevNewObj chan *types.Order) *OrderHandler {
 	return &OrderHandler{
-		becomeMaster: becomeMaster,
+		currNetwork: new(types.NetworkMessage),
 
 		netstatCurrentNetwork: netstatCurrNet,
 
-		elevGiveNewObj:  elevNewObj,
-		elevObjComplete: elevObjComp,
+		elevGiveNewObj: elevNewObj,
 	}
 }
 
 func (oh *OrderHandler) Run() {
 	for {
-		select {}
+		select {
+		case updatedNetwork := <-oh.netstatCurrentNetwork:
+			oh.parseNewNetwork(updatedNetwork)
+		}
 	}
+}
+
+func (oh *OrderHandler) parseNewNetwork(updNet *types.NetworkMessage) {
+	types.Clone(oh.currNetwork, updNet)
+
 }

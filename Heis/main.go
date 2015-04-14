@@ -27,12 +27,11 @@ func main() {
 	elevNewElevStat := make(chan *types.ElevStat)
 	elevOrder := make(chan *types.Order)
 
-	// ORDER <--> ELEV
+	// ORDER --> ELEV
 	orderToElev := make(chan *types.Order)
-	elevToOrder := make(chan *types.Order)
 
 	// Init of modules
-	orderHandler := order.NewOrderHandler(becomeMaster, netstatToOrder, orderToElev, elevToOrder)
+	orderHandler := order.NewOrderHandler(netstatToOrder, orderToElev)
 	netstatHandler := netstat.NewNetstatHandler(becomeMaster, nethubToNetstat, netstatToNethub,
 		netstatToOrder, elevNewElevStat, elevOrder)
 	networkHub := network.NewHub(becomeMaster, nethubToNetstat, netstatToNethub)

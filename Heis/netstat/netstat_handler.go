@@ -78,7 +78,7 @@ slaveloop:
 }
 
 func (ns *NetstatHandler) slaveNewMsg(newMsg *types.NetworkMessage) {
-	//ns.orderhandlerNotify <- newMsg
+	ns.orderhandlerNotify <- newMsg
 	types.Clone(ns.networkStatus, newMsg)
 	ns.networkUpdates.Id = ns.networkStatus.Id
 	ns.nethubUpdateNetMsg <- ns.networkUpdates
@@ -103,7 +103,7 @@ func (ns *NetstatHandler) masterNewMsg(newMsg *types.NetworkMessage) {
 	netStat := ns.networkStatus
 	if newMsg == nil {
 		fmt.Printf("Netstat : %+v\n", netStat)
-		//ns.orderhandlerNotify <- newMsg
+		ns.orderhandlerNotify <- newMsg
 		stats := []types.ElevStat{netStat.Statuses[0]}
 		netStat.Statuses = stats
 		return

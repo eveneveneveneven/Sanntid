@@ -1,4 +1,4 @@
-package cost
+package order
 
 func abs(value int) int {
 	if value < 0 {
