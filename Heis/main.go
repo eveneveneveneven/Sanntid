@@ -11,24 +11,34 @@ import (
 )
 
 func main() {
-	fmt.Println("Start main!")
+	fmt.Println("Start program!")
 
-	c := make(chan *types.NetworkMessage)
-
+	// master notification channel
 	becomeMaster := make(chan bool)
 
-	netToNetstat := make(chan *types.NetworkMessage)
-	netstatToNet := make(chan *types.NetworkMessage)
+	// NETSTAT <--> NETHUB
+	nethubToNetstat := make(chan *types.NetworkMessage)
+	netstatToNethub := make(chan *types.NetworkMessage)
 
+	// NETSTAT --> ORDER
 	netstatToOrder := make(chan *types.NetworkMessage)
-	orderToNetstat := make(chan *types.NetworkMessage)
 
-	orderHandler := order.NewOrderHandler(becomeMaster, netstatToOrder, orderToNetstat, nil, nil)
-	netStatHandler := netstat.NewNetStatHandler(becomeMaster, netToNetstat, netstatToNet, netstatToOrder, orderToNetstat)
-	networkHub := network.NewHub(becomeMaster, netToNetstat, netstatToNet)
+	// ELEV --> NETSTAT
+	elevNewElevStat := make(chan *types.ElevStat)
+	elevOrder := make(chan *types.Order)
+
+	// ORDER <--> ELEV
+	orderToElev := make(chan *types.Order)
+	elevToOrder := make(chan *types.Order)
+
+	// Init of modules
+	orderHandler := order.NewOrderHandler(becomeMaster, netstatToOrder, orderToElev, elevToOrder)
+	netstatHandler := netstat.NewNetstatHandler(becomeMaster, nethubToNetstat, netstatToNethub,
+		netstatToOrder, elevNewElevStat, elevOrder)
+	networkHub := network.NewHub(becomeMaster, nethubToNetstat, netstatToNethub)
 
 	go orderHandler.Run()
-	go netStatHandler.Run()
+	go netstatHandler.Run()
 	go networkHub.Run()
 
 	select {}

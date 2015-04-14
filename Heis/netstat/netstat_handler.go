@@ -2,90 +2,144 @@ package netstat
 
 import (
 	"../types"
+	"fmt"
 )
 
-type NetStatHandler struct {
+type NetstatHandler struct {
 	becomeMaster chan bool
 
 	networkStatus  *types.NetworkMessage
 	networkUpdates *types.NetworkMessage
 
-	netNewNetMsg    <-chan *types.NetworkMessage
-	netUpdateNetMsg chan<- *types.NetworkMessage
+	nethubNewNetMsg    <-chan *types.NetworkMessage
+	nethubUpdateNetMsg chan<- *types.NetworkMessage
 
 	elevNewElevStat <-chan *types.ElevStat
-	elevNewOrder    <-chan int
-	elevOrderDone   <-chan int
+	elevOrder       <-chan *types.Order
 
-	orderHandlerNotify chan<- *types.NetworkMessage
-	orderHandlerUpdate <-chan *types.NetworkMessage
+	orderhandlerNotify chan<- *types.NetworkMessage
 }
 
-func NewNetStatHandler(becomeMaster chan bool,
+func NewNetstatHandler(becomeMaster chan bool,
 	netNewMsg, netUpdMsg chan *types.NetworkMessage,
-	orderNotify, orderUpdate chan *types.NetworkMessage) *NetStatHandler {
-	return &NetStatHandler{
+	orderNotify chan *types.NetworkMessage,
+	elevNewStat chan *types.ElevStat, elevOrder chan *types.Order) *NetstatHandler {
+	ns := &NetstatHandler{
 		becomeMaster: becomeMaster,
 
-		networkStatus:  nil,
+		networkStatus:  new(types.NetworkMessage),
 		networkUpdates: new(types.NetworkMessage),
 
-		netNewNetMsg:    netNewMsg,
-		netUpdateNetMsg: netUpdMsg,
+		nethubNewNetMsg:    netNewMsg,
+		nethubUpdateNetMsg: netUpdMsg,
 
-		elevNewElevStat: make(chan *types.ElevStat),
-		elevNewOrder:    make(chan int),
-		elevOrderDone:   make(chan int),
+		elevNewElevStat: elevNewStat,
+		elevOrder:       elevOrder,
 
-		orderHandlerNotify: orderNotify,
-		orderHandlerUpdate: orderUpdate,
+		orderhandlerNotify: orderNotify,
 	}
+	ns.networkStatus.Statuses = append(ns.networkStatus.Statuses, *types.NewElevStat())
+	ns.networkUpdates.Statuses = append(ns.networkUpdates.Statuses, *types.NewElevStat())
+	return ns
 }
 
-func (ns *NetStatHandler) Run() {
+func (ns *NetstatHandler) Run() {
+
 	// Slave loop
 slaveloop:
 	for {
-		// Prioritize checking the master channel
-		if _, ok := <-ns.becomeMaster; !ok {
-			break
-		}
-
 		select {
 		case _, ok := <-ns.becomeMaster:
 			if !ok {
+				ns.nethubUpdateNetMsg <- ns.networkStatus
 				break slaveloop
 			}
-		case newMsg := <-ns.netNewNetMsg:
-			ns.networkStatus = newMsg
-			ns.orderHandlerNotify <- newMsg
-			ns.netUpdateNetMsg <- ns.networkUpdates
-			types.Clone(ns.networkUpdates, ns.networkStatus)
+		case newMsg := <-ns.nethubNewNetMsg:
+			ns.slaveNewMsg(newMsg)
 		case newElevStat := <-ns.elevNewElevStat:
-			ns.networkUpdates.Statuses[ns.networkUpdates.Id] = *newElevStat
-			ns.netUpdateNetMsg <- ns.networkUpdates
-		case newOrder := <-ns.elevNewOrder:
-
-		case orderDone := <-ns.elevOrderDone:
-
+			ns.slaveNewElevStat(newElevStat)
+		case newOrder := <-ns.elevOrder:
+			ns.slaveNewOrder(newOrder)
 		}
 	}
 
 	// Master loop
+	ns.networkStatus.Id = 0
 	for {
 		select {
-		case newMsg := <-ns.netNewNetMsg:
-			parseAndAddMessage(newMsg)
+		case newMsg := <-ns.nethubNewNetMsg:
+			ns.masterNewMsg(newMsg)
 		case newElevStat := <-ns.elevNewElevStat:
-
-		case newOrder := <-ns.elevNewOrder:
-
-		case orderDone := <-ns.elevOrderDone:
-
+			ns.masterNewElevStat(newElevStat)
+		case newOrder := <-ns.elevOrder:
+			ns.masterNewOrder(newOrder)
 		}
 	}
 }
 
-func parseAndAddMessage(msg *types.NetworkMessage) {
+func (ns *NetstatHandler) slaveNewMsg(newMsg *types.NetworkMessage) {
+	//ns.orderhandlerNotify <- newMsg
+	types.Clone(ns.networkStatus, newMsg)
+	ns.networkUpdates.Id = ns.networkStatus.Id
+	ns.nethubUpdateNetMsg <- ns.networkUpdates
+	for order := range ns.networkUpdates.Orders {
+		delete(ns.networkUpdates.Orders, order)
+	}
+}
 
+func (ns *NetstatHandler) slaveNewElevStat(newElevStat *types.ElevStat) {
+	ns.networkUpdates.Statuses[0] = *newElevStat
+	ns.nethubUpdateNetMsg <- ns.networkUpdates
+}
+
+func (ns *NetstatHandler) slaveNewOrder(newOrder *types.Order) {
+	if _, ok := ns.networkUpdates.Orders[*newOrder]; !ok {
+		ns.networkUpdates.Orders[*newOrder] = struct{}{}
+		ns.nethubUpdateNetMsg <- ns.networkUpdates
+	}
+}
+
+func (ns *NetstatHandler) masterNewMsg(newMsg *types.NetworkMessage) {
+	netStat := ns.networkStatus
+	if newMsg == nil {
+		fmt.Printf("Netstat : %+v\n", netStat)
+		//ns.orderhandlerNotify <- newMsg
+		stats := []types.ElevStat{netStat.Statuses[0]}
+		netStat.Statuses = stats
+		return
+	}
+	id := newMsg.Id
+	numElevs := len(netStat.Statuses)
+	if numElevs == id {
+		netStat.Statuses = append(netStat.Statuses, newMsg.Statuses[0])
+	} else if numElevs > id {
+		netStat.Statuses[id] = newMsg.Statuses[0]
+	} else {
+		fmt.Printf(`\t\x1b[31;1mError\x1b[0m |ns.masterNewMsg| [Got id:%v,
+			has only numElevs:%v],discard input\n`, id, numElevs)
+	}
+	for order := range newMsg.Orders {
+		if _, ok := netStat.Orders[order]; !ok {
+			netStat.Orders[order] = struct{}{}
+		} else if order.Completed {
+			delete(netStat.Orders, order)
+		}
+	}
+	ns.nethubUpdateNetMsg <- netStat
+}
+
+func (ns *NetstatHandler) masterNewElevStat(newElevStat *types.ElevStat) {
+	netStat := ns.networkStatus
+	netStat.Statuses[0] = *newElevStat
+	ns.nethubUpdateNetMsg <- netStat
+}
+
+func (ns *NetstatHandler) masterNewOrder(newOrder *types.Order) {
+	netStat := ns.networkStatus
+	if _, ok := netStat.Orders[*newOrder]; !ok {
+		netStat.Orders[*newOrder] = struct{}{}
+	} else if newOrder.Completed {
+		delete(netStat.Orders, *newOrder)
+	}
+	ns.nethubUpdateNetMsg <- netStat
 }

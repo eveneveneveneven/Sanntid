@@ -12,3 +12,11 @@ func Clone(dst, src interface{}) {
 	enc.Encode(src)
 	dec.Decode(dst)
 }
+
+func NewElevStat() *ElevStat {
+	return &ElevStat{
+		Dir:            0,
+		Floor:          -1,
+		InternalOrders: []bool{false, false, false, false},
+	}
+}

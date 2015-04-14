@@ -9,8 +9,7 @@ import (
 )
 
 type Hub struct {
-	master bool
-	id     int
+	id int
 
 	becomeMaster chan bool
 
@@ -30,18 +29,24 @@ type Hub struct {
 func NewHub(becomeMaster chan bool,
 	netStatSend, netStatRec chan *types.NetworkMessage) *Hub {
 	return &Hub{
-		master: false,
-		id:     -1,
+		id: -1,
 
 		becomeMaster: becomeMaster,
 
 		networkStatus: &types.NetworkMessage{
-			Id:        -1,
-			Statuses:  make([]types.ElevStat, 10),
-			Orders:    make([]int, 6),
-			NewOrders: make([]int, 6),
+			Id: -1,
+			Statuses: []types.ElevStat{
+				*types.NewElevStat(),
+			},
+			Orders: make(map[types.Order]struct{}),
 		},
-		netMsgUpd: new(types.NetworkMessage),
+		netMsgUpd: &types.NetworkMessage{
+			Id: -1,
+			Statuses: []types.ElevStat{
+				*types.NewElevStat(),
+			},
+			Orders: make(map[types.Order]struct{}),
+		},
 
 		foundMaster:   make(chan string),
 		missingMaster: make(chan bool),
@@ -62,7 +67,8 @@ func (h *Hub) Run() {
 
 	// Slave loop
 	connected := false
-	for !h.master {
+slaveloop:
+	for {
 		select {
 		case masterIp := <-h.foundMaster:
 			if connected {
@@ -77,19 +83,18 @@ func (h *Hub) Run() {
 			switch h.id {
 			case 1:
 				fmt.Println("Master is dead, I am Master!")
-				h.master = true
 				h.id = 0
+				break slaveloop
 			case -1:
 				fmt.Println("There is no Master, claim Master!")
-				h.master = true
 				h.id = 0
+				break slaveloop
 			default:
 				fmt.Println("Master is dead, continue as slave...")
 				h.id--
 			}
 			connected = false
 		case msgRecieve := <-h.messageRecieved:
-			fmt.Printf("Recieved: %+v\n", msgRecieve)
 			h.parseMessage(msgRecieve)
 		case netstatUpdate := <-h.netstatUpdate:
 			h.netMsgUpd = netstatUpdate
@@ -104,16 +109,18 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case netStat := <-h.netstatUpdate:
-			h.networkStatus = netStat
+			types.Clone(h.networkStatus, netStat)
 		case msgRec := <-h.messageRecieved:
 			h.netstatNewMsg <- msgRec
 		case <-tick:
+			h.netstatNewMsg <- nil
 			h.messageSend <- h.networkStatus
 		}
 	}
 }
 
 func (h *Hub) parseMessage(msg *types.NetworkMessage) {
+	fmt.Printf("Recieved: %+v\n", msg)
 	h.id = msg.Id
 	h.networkStatus = msg
 	h.netstatNewMsg <- msg

@@ -10,36 +10,31 @@ const (
 )
 
 // Type definitions for the elevator and networkmessage protocol
-type Direction int
-
 const (
-	UP Direction = iota
+	UP int = iota
 	DOWN
 	STOP
 )
 
-type ButtonType_t int
-
 const (
-	BUTTON_CALL_UP ButtonType_t = iota
+	BUTTON_CALL_UP int = iota
 	BUTTON_CALL_DOWN
-	BUTTON_COMMAND
 )
 
-type Button struct {
-	ButtonType ButtonType_t
-	Floor      int
+type Order struct {
+	ButtonPress int
+	Floor       int
+	Completed   bool
 }
 
 type ElevStat struct {
-	Dir            Direction
+	Dir            int
 	Floor          int
 	InternalOrders []bool
 }
 
 type NetworkMessage struct {
-	Id        int
-	Statuses  []ElevStat
-	Orders    []int
-	NewOrders []int
+	Id       int
+	Statuses []ElevStat
+	Orders   map[Order]struct{}
 }

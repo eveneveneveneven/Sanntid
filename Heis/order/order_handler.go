@@ -5,23 +5,22 @@ import (
 )
 
 type OrderHandler struct {
+	currNetwork *types.NetworkMessage
+
 	becomeMaster chan bool
 
 	netstatCurrentNetwork <-chan *types.NetworkMessage
-	netstatNotify         chan<- *types.NetworkMessage
 
-	elevGiveNewObj  chan<- int
-	elevObjComplete <-chan int
+	elevGiveNewObj  chan<- *types.Order
+	elevObjComplete <-chan *types.Order
 }
 
-func NewOrderHandler(becomeMaster chan bool,
-	netstatCurrNet, netstatNotify chan *types.NetworkMessage,
-	elevNewObj, elevObjComp chan int) *OrderHandler {
+func NewOrderHandler(becomeMaster chan bool, netstatCurrNet chan *types.NetworkMessage,
+	elevNewObj, elevObjComp chan *types.Order) *OrderHandler {
 	return &OrderHandler{
 		becomeMaster: becomeMaster,
 
 		netstatCurrentNetwork: netstatCurrNet,
-		netstatNotify:         netstatNotify,
 
 		elevGiveNewObj:  elevNewObj,
 		elevObjComplete: elevObjComp,
