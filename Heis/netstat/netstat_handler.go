@@ -22,12 +22,13 @@ type NetStatHandler struct {
 }
 
 func NewNetStatHandler(becomeMaster chan bool,
-	netNewMsg, netUpdMsg chan *types.NetworkMessage) *NetStatHandler {
+	netNewMsg, netUpdMsg chan *types.NetworkMessage,
+	orderNotify, orderUpdate chan *types.NetworkMessage) *NetStatHandler {
 	return &NetStatHandler{
 		becomeMaster: becomeMaster,
 
 		networkStatus:  nil,
-		networkUpdates: new(chan *types.NetworkMessage),
+		networkUpdates: new(types.NetworkMessage),
 
 		netNewNetMsg:    netNewMsg,
 		netUpdateNetMsg: netUpdMsg,
@@ -36,8 +37,8 @@ func NewNetStatHandler(becomeMaster chan bool,
 		elevNewOrder:    make(chan int),
 		elevOrderDone:   make(chan int),
 
-		orderHandlerNotify: make(chan *types.NetworkMessage),
-		orderHandlerUpdate: make(chan *types.NetworkMessage),
+		orderHandlerNotify: orderNotify,
+		orderHandlerUpdate: orderUpdate,
 	}
 }
 

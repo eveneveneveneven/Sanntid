@@ -5,46 +5,31 @@ import (
 )
 
 type OrderHandler struct {
-	networkStatus  *types.NetworkMessage
-	elevatorStatus *types.ElevStat
+	becomeMaster chan bool
 
-	localConn chan *types.NetworkMessage // connection from network module
+	netstatCurrentNetwork <-chan *types.NetworkMessage
+	netstatNotify         chan<- *types.NetworkMessage
 
-	elevGoToFloor chan int // connection to elevator module
-	orderDone     chan int // connection from elevator module
-
-	newOrder        chan int // connection from button module
-	clearOrderLight chan int // connection to light module
+	elevGiveNewObj  chan<- int
+	elevObjComplete <-chan int
 }
 
-func NewOrderHandler(lc chan *types.NetworkMessage) *OrderHandler {
+func NewOrderHandler(becomeMaster chan bool,
+	netstatCurrNet, netstatNotify chan *types.NetworkMessage,
+	elevNewObj, elevObjComp chan int) *OrderHandler {
 	return &OrderHandler{
-		networkStatus:  new(types.NetworkMessage),
-		elevatorStatus: new(types.ElevStat),
+		becomeMaster: becomeMaster,
 
-		localConn: lc,
+		netstatCurrentNetwork: netstatCurrNet,
+		netstatNotify:         netstatNotify,
 
-		elevGoToFloor: nil,
-		orderDone:     nil,
-
-		newOrder:        nil,
-		clearOrderLight: nil,
+		elevGiveNewObj:  elevNewObj,
+		elevObjComplete: elevObjComp,
 	}
 }
 
 func (oh *OrderHandler) Run() {
 	for {
-		select {
-		case networkUpdate := <-oh.localConn:
-			types.Clone(oh.networkStatus, networkUpdate)
-			response := &types.NetworkMessage{
-				Id:        -1,
-				Statuses:  make([]types.ElevStat, 1),
-				Orders:    nil,
-				NewOrders: nil,
-			}
-			response.Statuses[0] = *oh.elevatorStatus
-			oh.localConn <- response
-		}
+		select {}
 	}
 }

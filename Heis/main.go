@@ -16,12 +16,16 @@ func main() {
 	c := make(chan *types.NetworkMessage)
 
 	becomeMaster := make(chan bool)
-	netToNetStat := make(chan *types.NetworkMessage)
-	netStatToNet := make(chan *types.NetworkMessage)
 
-	orderHandler := order.NewOrderHandler(c)
-	netStatHandler := netstat.NewNetStatHandler(becomeMaster, netToNetStat, netStatToNet)
-	networkHub := network.NewHub(becomeMaster, netToNetStat, netStatToNet)
+	netToNetstat := make(chan *types.NetworkMessage)
+	netstatToNet := make(chan *types.NetworkMessage)
+
+	netstatToOrder := make(chan *types.NetworkMessage)
+	orderToNetstat := make(chan *types.NetworkMessage)
+
+	orderHandler := order.NewOrderHandler(becomeMaster, netstatToOrder, orderToNetstat, nil, nil)
+	netStatHandler := netstat.NewNetStatHandler(becomeMaster, netToNetstat, netstatToNet, netstatToOrder, orderToNetstat)
+	networkHub := network.NewHub(becomeMaster, netToNetstat, netstatToNet)
 
 	go orderHandler.Run()
 	go netStatHandler.Run()

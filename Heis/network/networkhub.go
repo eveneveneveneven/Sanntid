@@ -23,8 +23,8 @@ type Hub struct {
 	messageRecieved chan *types.NetworkMessage
 	messageSend     chan *types.NetworkMessage
 
-	netStatNewMsg chan *types.NetworkMessage
-	netStatUpdate chan *types.NetworkMessage
+	netstatNewMsg chan *types.NetworkMessage
+	netstatUpdate chan *types.NetworkMessage
 }
 
 func NewHub(becomeMaster chan bool,
@@ -49,8 +49,8 @@ func NewHub(becomeMaster chan bool,
 		messageRecieved: make(chan *types.NetworkMessage),
 		messageSend:     make(chan *types.NetworkMessage),
 
-		netStatNewMsg: netStatSend,
-		netStatUpdate: netStatRec,
+		netstatNewMsg: netStatSend,
+		netstatUpdate: netStatRec,
 	}
 }
 
@@ -91,7 +91,7 @@ func (h *Hub) Run() {
 		case msgRecieve := <-h.messageRecieved:
 			fmt.Printf("Recieved: %+v\n", msgRecieve)
 			h.parseMessage(msgRecieve)
-		case netstatUpdate := <-h.netStatUpdate:
+		case netstatUpdate := <-h.netstatUpdate:
 			h.netMsgUpd = netstatUpdate
 		}
 	}
@@ -103,10 +103,10 @@ func (h *Hub) Run() {
 	tick := time.Tick(types.SEND_INTERVAL * time.Millisecond)
 	for {
 		select {
-		case netStat := <-h.netStatUpdate:
+		case netStat := <-h.netstatUpdate:
 			h.networkStatus = netStat
 		case msgRec := <-h.messageRecieved:
-			h.netStatNewMsg <- msgRec
+			h.netstatNewMsg <- msgRec
 		case <-tick:
 			h.messageSend <- h.networkStatus
 		}
@@ -116,6 +116,6 @@ func (h *Hub) Run() {
 func (h *Hub) parseMessage(msg *types.NetworkMessage) {
 	h.id = msg.Id
 	h.networkStatus = msg
-	h.netStatNewMsg <- msg
+	h.netstatNewMsg <- msg
 	h.messageSend <- h.netMsgUpd
 }
