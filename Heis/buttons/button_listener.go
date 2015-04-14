@@ -5,12 +5,12 @@ import (
 	"../lights"
 )
 
-type Button struct{
+type Button struct {
 	Button_type Elev_button_type_t
-	Floor int
+	Floor       int
 }
 
-func reset_orders(orders [][]int) ([][]int){
+func reset_orders(orders [][]int) [][]int {
 	for i := 0; i < 5; i++ {
 		orders[i] = make([]int, 4)
 	}
@@ -36,7 +36,7 @@ func Get_orders() {
 	for {
 		for floor := 0; floor < 4; floor++ {
 			if floor != 3 {
-				if Heis_get_button(BUTTON_CALL_UP, floor) == 1 && orders[floor][BUTTON_CALL_UP] != 1{
+				if Heis_get_button(BUTTON_CALL_UP, floor) == 1 && orders[floor][BUTTON_CALL_UP] != 1 {
 					reset_orders(orders)
 					orders[floor][BUTTON_CALL_UP] = 1
 					/*b := &Button{
@@ -47,7 +47,7 @@ func Get_orders() {
 					break
 				}
 			}
-			if Heis_get_button(BUTTON_COMMAND, floor) == 1 && orders[floor][BUTTON_COMMAND] != 1{
+			if Heis_get_button(BUTTON_COMMAND, floor) == 1 && orders[floor][BUTTON_COMMAND] != 1 {
 				reset_orders(orders)
 				orders[floor][BUTTON_COMMAND] = 1
 				/*b := &Button{
@@ -57,7 +57,7 @@ func Get_orders() {
 				break
 			}
 			if floor != 0 {
-				if Heis_get_button(BUTTON_CALL_DOWN, floor) == 1 && orders[floor][BUTTON_CALL_DOWN] != 1{
+				if Heis_get_button(BUTTON_CALL_DOWN, floor) == 1 && orders[floor][BUTTON_CALL_DOWN] != 1 {
 					reset_orders(orders)
 					orders[floor][BUTTON_CALL_DOWN] = 1
 					/*b := &Button{
@@ -69,6 +69,6 @@ func Get_orders() {
 			}
 		}
 		lights.Set_internal_lights(orders)
-		//ch <- 0 
+		//ch <- 0
 	}
 }

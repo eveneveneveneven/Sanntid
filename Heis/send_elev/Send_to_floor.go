@@ -1,4 +1,5 @@
 package Send_to_floor
+
 import (
 	. "../driver"
 	"time"
@@ -13,19 +14,19 @@ func open_doors() {
 	return
 }
 
-func Send_to_floor(ordered_floor int){
+func Send_to_floor(ordered_floor int) {
 outerloop:
 	for i := 0; i < 4; i++ {
 		speed = 150
 		current_order := ordered_floor
 		current_floor := Heis_get_floor()
-		if current_order != -1 && current_order != current_floor{
+		if current_order != -1 && current_order != current_floor {
 			//Println("Order received: Floor ", current_order+1)
 		}
 		/*if current_floor == -1 {
 			stop_all()
 		}
-		
+
 		Print("Current floor: ")
 		Println(current_floor + 1)
 		Print("Going to: Floor ")

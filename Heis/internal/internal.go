@@ -1,22 +1,22 @@
 package internal
 
 import (
-	"../cost"
 	"../buttons"
-	"../send_elev"
+	"../cost"
 	. "../driver"
-	"fmt"
-	"time"
+	"../send_elev"
 	"bufio"
+	"fmt"
 	"os"
 	"strconv"
+	"time"
 )
 
 var speed int
 var dir int
 var last_floor int
 var current_order int
-var queue = []int {-1, -1, -1, -1}
+var queue = []int{-1, -1, -1, -1}
 var costs int
 var ordered_floor int
 
@@ -35,7 +35,7 @@ func Floor_indicator() {
 }
 
 func Get_last_floor() {
-	if Heis_get_floor() !=-1 {
+	if Heis_get_floor() != -1 {
 		last_floor = Heis_get_floor()
 	}
 }
@@ -44,49 +44,49 @@ func To_nearest_floor() {
 	for {
 
 		Heis_set_speed(-speed)
-		dir=-1
+		dir = -1
 		if Heis_get_floor() != -1 {
 			Heis_set_speed(0)
 			last_floor = Heis_get_floor()
-			dir=0
+			dir = 0
 
 			return
 		}
 		if Heis_get_floor() != -1 {
 			Heis_set_speed(0)
 			last_floor = Heis_get_floor()
-			dir=0
+			dir = 0
 			return
 		}
 	}
 }
 func get_input() {
-	reader := bufio.NewReader(os.Stdin) 
+	reader := bufio.NewReader(os.Stdin)
 	costs := 0
 	current_floor := Heis_get_floor()
-	for { 
-		fmt.Print("Enter int: ") 
-		text, _ := reader.ReadString('\n') 
+	for {
+		fmt.Print("Enter int: ")
+		text, _ := reader.ReadString('\n')
 		i, err := strconv.Atoi(text[:len(text)-1])
-		if err != nil || i>3 || i<0 {
-			fmt.Println("Index out of range, or wrong format. Try again: ") 
-		}else{
+		if err != nil || i > 3 || i < 0 {
+			fmt.Println("Index out of range, or wrong format. Try again: ")
+		} else {
 			ordered_floor = i
 			current_floor = Heis_get_floor()
-			if ordered_floor < current_floor{
+			if ordered_floor < current_floor {
 				dir = -1
 			}
-			if ordered_floor > current_floor{
+			if ordered_floor > current_floor {
 				dir = 1
 			}
-			if ordered_floor == current_floor{
+			if ordered_floor == current_floor {
 				dir = 0
 			}
 			costs = cost.Cost_function(current_floor, ordered_floor, dir)
 			fmt.Println("Cost: ", costs)
 			Send_to_floor.Send_to_floor(ordered_floor)
 		}
-	} 
+	}
 }
 
 func Internal() {
