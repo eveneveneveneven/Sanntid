@@ -19,6 +19,7 @@ const (
 const (
 	BUTTON_CALL_UP int = iota
 	BUTTON_CALL_DOWN
+	BUTTON_INTERNAL
 )
 
 type Order struct {

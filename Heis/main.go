@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	//"./driver"
+	"./elev"
 	"./netstat"
 	"./network"
 	"./order"
@@ -31,11 +32,13 @@ func main() {
 	orderToElev := make(chan *types.Order)
 
 	// Init of modules
+	elevator := elev.NewElevator(orderToElev, elevOrder, elevNewElevStat)
 	orderHandler := order.NewOrderHandler(netstatToOrder, orderToElev)
 	netstatHandler := netstat.NewNetstatHandler(becomeMaster, nethubToNetstat, netstatToNethub,
 		netstatToOrder, elevNewElevStat, elevOrder)
 	networkHub := network.NewHub(becomeMaster, nethubToNetstat, netstatToNethub)
 
+	go elevator.Run()
 	go orderHandler.Run()
 	go netstatHandler.Run()
 	go networkHub.Run()
