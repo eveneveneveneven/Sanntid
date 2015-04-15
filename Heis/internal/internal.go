@@ -60,7 +60,7 @@ func To_nearest_floor() {
 		}
 	}
 }
-func get_input() {
+/*func get_input() {
 	reader := bufio.NewReader(os.Stdin) 
 	costs := 0
 	current_floor := Heis_get_floor()
@@ -87,7 +87,7 @@ func get_input() {
 			Send_to_floor.Send_to_floor(ordered_floor)
 		}
 	} 
-}
+}*/
 
 func Internal() {
 	// Init
