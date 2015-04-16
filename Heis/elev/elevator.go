@@ -17,7 +17,6 @@ type Elevator struct {
 	state *types.ElevStat
 	obj   *types.Order
 
-	orderLn chan *types.Order
 	dirLn   chan int
 	floorLn chan int
 
@@ -35,7 +34,6 @@ func NewElevator(newObj chan *types.Order,
 		state: types.NewElevStat(),
 		obj:   nil,
 
-		orderLn: make(chan *types.Order, BUFFER_ORDERS),
 		dirLn:   make(chan int),
 		floorLn: make(chan int),
 
@@ -45,14 +43,15 @@ func NewElevator(newObj chan *types.Order,
 		notifyOrder: order,
 		newElevStat: elevStat,
 	}
-	go floorIndicator()
+	//go floorIndicator()
 	el.elevInit()
-	go buttonListener(el.orderLn)
+	go buttonListener(el.notifyOrder)
 	go el.floorListener()
 	return el
 }
 
 func (el *Elevator) Run() {
+	fmt.Println("Elevator Run")
 	var objQuit chan bool = nil
 	for {
 		select {
@@ -68,9 +67,11 @@ func (el *Elevator) Run() {
 			el.notifyOrder <- el.obj
 			el.obj = nil
 		case newDir := <-el.dirLn:
+			fmt.Println("New direction", newDir)
 			el.state.Dir = newDir
 			el.newElevStat <- el.state
 		case newFloor := <-el.floorLn:
+			fmt.Println("New floor", newFloor)
 			el.state.Floor = newFloor
 			el.newElevStat <- el.state
 		}
@@ -78,10 +79,13 @@ func (el *Elevator) Run() {
 }
 
 func (el *Elevator) elevInit() {
-	el.goDirection(types.DOWN)
-	for driver.Heis_get_floor() == -1 {
+	if driver.Heis_get_floor() == -1 {
+		el.goDirection(types.DOWN)
+		for driver.Heis_get_floor() == -1 {
+		}
+		el.goDirection(types.STOP)
 	}
-	el.goDirection(types.STOP)
+	fmt.Println("Elevator init done")
 }
 
 func (el *Elevator) floorListener() {

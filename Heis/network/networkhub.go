@@ -96,8 +96,8 @@ slaveloop:
 			connected = false
 		case msgRecieve := <-h.messageRecieved:
 			h.parseMessage(msgRecieve)
-		case netstatUpdate := <-h.netstatUpdate:
-			h.netMsgUpd = netstatUpdate
+		case netStatUpd := <-h.netstatUpdate:
+			h.netMsgUpd = netStatUpd
 		}
 	}
 
@@ -108,8 +108,8 @@ slaveloop:
 	tick := time.Tick(types.SEND_INTERVAL * time.Millisecond)
 	for {
 		select {
-		case netStat := <-h.netstatUpdate:
-			types.Clone(h.networkStatus, netStat)
+		case netStatUpd := <-h.netstatUpdate:
+			types.Clone(h.networkStatus, netStatUpd)
 		case msgRec := <-h.messageRecieved:
 			h.netstatNewMsg <- msgRec
 		case <-tick:

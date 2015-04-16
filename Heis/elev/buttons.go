@@ -5,7 +5,7 @@ import (
 	"../types"
 )
 
-func buttonListener(orderLn chan *types.Order) {
+func buttonListener(orderLn chan<- *types.Order) {
 	pressed := make([][]bool, 4)
 	for i := 0; i < 4; i++ {
 		pressed[i] = make([]bool, 3)

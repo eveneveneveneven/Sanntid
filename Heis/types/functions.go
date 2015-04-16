@@ -20,3 +20,11 @@ func NewElevStat() *ElevStat {
 		InternalOrders: []bool{false, false, false, false},
 	}
 }
+
+func NewNetworkMessage() *NetworkMessage {
+	return &NetworkMessage{
+		Id:       -1,
+		Statuses: nil,
+		Orders:   make(map[Order]struct{}),
+	}
+}

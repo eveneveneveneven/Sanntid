@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 
-	//"./driver"
 	"./elev"
 	"./netstat"
 	"./network"
@@ -34,14 +33,14 @@ func main() {
 	// Init of modules
 	elevator := elev.NewElevator(orderToElev, elevOrder, elevNewElevStat)
 	orderHandler := order.NewOrderHandler(netstatToOrder, orderToElev)
+	networkHub := network.NewHub(becomeMaster, nethubToNetstat, netstatToNethub)
 	netstatHandler := netstat.NewNetstatHandler(becomeMaster, nethubToNetstat, netstatToNethub,
 		netstatToOrder, elevNewElevStat, elevOrder)
-	networkHub := network.NewHub(becomeMaster, nethubToNetstat, netstatToNethub)
 
 	go elevator.Run()
+	go networkHub.Run()
 	go orderHandler.Run()
 	go netstatHandler.Run()
-	go networkHub.Run()
 
 	select {}
 }

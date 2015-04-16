@@ -27,8 +27,8 @@ func NewNetstatHandler(becomeMaster chan bool,
 	ns := &NetstatHandler{
 		becomeMaster: becomeMaster,
 
-		networkStatus:  new(types.NetworkMessage),
-		networkUpdates: new(types.NetworkMessage),
+		networkStatus:  types.NewNetworkMessage(),
+		networkUpdates: types.NewNetworkMessage(),
 
 		nethubNewNetMsg:    netNewMsg,
 		nethubUpdateNetMsg: netUpdMsg,
@@ -65,6 +65,7 @@ slaveloop:
 
 	// Master loop
 	ns.networkStatus.Id = 0
+	ns.networkStatus.Statuses[0] = ns.networkUpdates.Statuses[0]
 	for {
 		select {
 		case newMsg := <-ns.nethubNewNetMsg:
@@ -94,6 +95,7 @@ func (ns *NetstatHandler) slaveNewElevStat(newElevStat *types.ElevStat) {
 
 func (ns *NetstatHandler) slaveNewOrder(newOrder *types.Order) {
 	if _, ok := ns.networkUpdates.Orders[*newOrder]; !ok {
+		fmt.Printf("Adding new order %+v\n", newOrder)
 		ns.networkUpdates.Orders[*newOrder] = struct{}{}
 		ns.nethubUpdateNetMsg <- ns.networkUpdates
 	}

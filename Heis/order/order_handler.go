@@ -33,6 +33,7 @@ func (oh *OrderHandler) Run() {
 }
 
 func (oh *OrderHandler) parseNewNetwork(updNet *types.NetworkMessage) {
-	types.Clone(oh.currNetwork, updNet)
-
+	if updNet != nil {
+		types.Clone(oh.currNetwork, updNet)
+	}
 }
