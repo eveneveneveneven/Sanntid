@@ -3,12 +3,13 @@ package elev
 import (
 	"../driver"
 	"../types"
+	"fmt"
 	"time"
 )
 
 func setOrderLight(Order *types.Order) {
-	if (Order.ButtonPress == BUTTON_CALL_UP || Order.ButtonPress == BUTTON_CALL_UP ||
-		Order.ButtonPress == BUTTON_CALL_UP) && (Order.Floor >= 0 && Order.Floor <= 3) {
+	if (Order.ButtonPress == types.BUTTON_CALL_UP || Order.ButtonPress == types.BUTTON_CALL_DOWN ||
+		Order.ButtonPress == types.BUTTON_INTERNAL) && (Order.Floor >= 0 && Order.Floor <= 3) {
 		if Order.Completed {
 			driver.Heis_set_button_lamp(Order.ButtonPress, Order.Floor, 0)
 		} else {
@@ -25,7 +26,7 @@ func floorIndicator() {
 	for {
 		floor = driver.Heis_get_floor()
 		if floor != -1 {
-			Heis_set_floor_indicator(floor)
+			driver.Heis_set_floor_indicator(floor)
 		}
 		time.Sleep(50 * time.Millisecond)
 	}

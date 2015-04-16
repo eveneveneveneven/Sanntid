@@ -4,7 +4,7 @@ import (
 	"../driver"
 	"../types"
 	"fmt"
-	"times"
+	"time"
 )
 
 const (
@@ -22,7 +22,7 @@ type Elevator struct {
 	floorLn chan int
 
 	newObj  <-chan *types.Order
-	objDone chan *types.Order
+	objDone chan bool
 
 	notifyOrder chan<- *types.Order
 	newElevStat chan<- *types.ElevStat
@@ -32,7 +32,7 @@ func NewElevator(newObj chan *types.Order,
 	order chan *types.Order, elevStat chan *types.ElevStat) *Elevator {
 	driver.Heis_init()
 	el := &Elevator{
-		state: types.NewElevStat,
+		state: types.NewElevStat(),
 		obj:   nil,
 
 		orderLn: make(chan *types.Order, BUFFER_ORDERS),
@@ -40,7 +40,7 @@ func NewElevator(newObj chan *types.Order,
 		floorLn: make(chan int),
 
 		newObj:  newObj,
-		objDone: make(chan *types.Order),
+		objDone: make(chan bool),
 
 		notifyOrder: order,
 		newElevStat: elevStat,
@@ -63,15 +63,15 @@ func (el *Elevator) Run() {
 			objQuit = make(chan bool)
 			el.obj = newObj
 			go el.goToObjective(objQuit)
-		case objDone := <-el.objDone:
+		case <-el.objDone:
 			el.openDoors()
-			el.notifyOrder <- objDone
+			el.notifyOrder <- el.obj
 			el.obj = nil
-		case dir := <-el.newDir:
-			el.state.Dir = dir
+		case newDir := <-el.dirLn:
+			el.state.Dir = newDir
 			el.newElevStat <- el.state
-		case floor := <-el.newFloor:
-			el.state.Floor = floor
+		case newFloor := <-el.floorLn:
+			el.state.Floor = newFloor
 			el.newElevStat <- el.state
 		}
 	}
@@ -85,11 +85,11 @@ func (el *Elevator) elevInit() {
 }
 
 func (el *Elevator) floorListener() {
-	var floor, currFloor int
+	var floor, currFloor int = -1, -1
 	for {
 		floor = driver.Heis_get_floor()
 		if floor != -1 && floor != currFloor {
-			el.newFloor <- floor
+			el.floorLn <- floor
 			currFloor = floor
 		}
 	}
