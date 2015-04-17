@@ -120,10 +120,6 @@ slaveloop:
 }
 
 func (h *Hub) parseMessage(msg *types.NetworkMessage) {
-<<<<<<< HEAD
-=======
-	fmt.Printf("Recieved: %+v\n", msg)
->>>>>>> 23d545ecd2d0f08b3f30f1b40de27a25060d8f4c
 	h.id = msg.Id
 	h.networkStatus = msg
 	h.netstatNewMsg <- msg

@@ -66,14 +66,11 @@ slaveloop:
 	// Master loop
 	ns.networkStatus.Id = 0
 	ns.networkStatus.Statuses[0] = ns.networkUpdates.Statuses[0]
-<<<<<<< HEAD
 	for order := range ns.networkUpdates.Orders {
 		if _, ok := ns.networkStatus.Orders[order]; !ok {
 			ns.networkStatus.Orders[order] = struct{}{}
 		}
 	}
-=======
->>>>>>> 23d545ecd2d0f08b3f30f1b40de27a25060d8f4c
 	for {
 		select {
 		case newMsg := <-ns.nethubNewNetMsg:
@@ -87,10 +84,7 @@ slaveloop:
 }
 
 func (ns *NetstatHandler) slaveNewMsg(newMsg *types.NetworkMessage) {
-<<<<<<< HEAD
 	fmt.Printf("Netstat : %+v\n", newMsg)
-=======
->>>>>>> 23d545ecd2d0f08b3f30f1b40de27a25060d8f4c
 	ns.orderhandlerNotify <- newMsg
 	types.Clone(ns.networkStatus, newMsg)
 	ns.networkUpdates.Id = ns.networkStatus.Id
@@ -106,7 +100,6 @@ func (ns *NetstatHandler) slaveNewElevStat(newElevStat *types.ElevStat) {
 }
 
 func (ns *NetstatHandler) slaveNewOrder(newOrder *types.Order) {
-<<<<<<< HEAD
 	if newOrder.ButtonPress == types.BUTTON_INTERNAL {
 		internal := ns.networkUpdates.Statuses[0].InternalOrders
 		newEtg := newOrder.Floor
@@ -119,10 +112,6 @@ func (ns *NetstatHandler) slaveNewOrder(newOrder *types.Order) {
 			}
 		}
 	} else if _, ok := ns.networkUpdates.Orders[*newOrder]; !ok {
-=======
-	if _, ok := ns.networkUpdates.Orders[*newOrder]; !ok {
-		fmt.Printf("Adding new order %+v\n", newOrder)
->>>>>>> 23d545ecd2d0f08b3f30f1b40de27a25060d8f4c
 		ns.networkUpdates.Orders[*newOrder] = struct{}{}
 		ns.nethubUpdateNetMsg <- ns.networkUpdates
 	}
@@ -132,11 +121,7 @@ func (ns *NetstatHandler) masterNewMsg(newMsg *types.NetworkMessage) {
 	netStat := ns.networkStatus
 	if newMsg == nil {
 		fmt.Printf("Netstat : %+v\n", netStat)
-<<<<<<< HEAD
 		ns.orderhandlerNotify <- netStat
-=======
-		ns.orderhandlerNotify <- newMsg
->>>>>>> 23d545ecd2d0f08b3f30f1b40de27a25060d8f4c
 		stats := []types.ElevStat{netStat.Statuses[0]}
 		netStat.Statuses = stats
 		return
@@ -144,15 +129,10 @@ func (ns *NetstatHandler) masterNewMsg(newMsg *types.NetworkMessage) {
 	id := newMsg.Id
 	numElevs := len(netStat.Statuses)
 	if numElevs == id {
-<<<<<<< HEAD
 		//fmt.Printf("NewElevUpd : %+v\n", netStat)
 		netStat.Statuses = append(netStat.Statuses, newMsg.Statuses[0])
 	} else if numElevs > id {
 		//fmt.Printf("ElevUpd    : %+v\n", netStat)
-=======
-		netStat.Statuses = append(netStat.Statuses, newMsg.Statuses[0])
-	} else if numElevs > id {
->>>>>>> 23d545ecd2d0f08b3f30f1b40de27a25060d8f4c
 		netStat.Statuses[id] = newMsg.Statuses[0]
 	} else {
 		fmt.Printf(`\t\x1b[31;1mError\x1b[0m |ns.masterNewMsg| [Got id:%v,
@@ -160,15 +140,10 @@ func (ns *NetstatHandler) masterNewMsg(newMsg *types.NetworkMessage) {
 	}
 	for order := range newMsg.Orders {
 		if _, ok := netStat.Orders[order]; !ok {
-<<<<<<< HEAD
 			fmt.Printf("NewOrder   : %+v\n", netStat)
 			netStat.Orders[order] = struct{}{}
 		} else if order.Completed {
 			fmt.Printf("DeleteOrder: %+v\n", netStat)
-=======
-			netStat.Orders[order] = struct{}{}
-		} else if order.Completed {
->>>>>>> 23d545ecd2d0f08b3f30f1b40de27a25060d8f4c
 			delete(netStat.Orders, order)
 		}
 	}
@@ -183,7 +158,6 @@ func (ns *NetstatHandler) masterNewElevStat(newElevStat *types.ElevStat) {
 
 func (ns *NetstatHandler) masterNewOrder(newOrder *types.Order) {
 	netStat := ns.networkStatus
-<<<<<<< HEAD
 	if newOrder.ButtonPress == types.BUTTON_INTERNAL {
 		internal := netStat.Statuses[0].InternalOrders
 		newEtg := newOrder.Floor
@@ -196,9 +170,6 @@ func (ns *NetstatHandler) masterNewOrder(newOrder *types.Order) {
 			}
 		}
 	} else if _, ok := netStat.Orders[*newOrder]; !ok {
-=======
-	if _, ok := netStat.Orders[*newOrder]; !ok {
->>>>>>> 23d545ecd2d0f08b3f30f1b40de27a25060d8f4c
 		netStat.Orders[*newOrder] = struct{}{}
 	} else if newOrder.Completed {
 		delete(netStat.Orders, *newOrder)
