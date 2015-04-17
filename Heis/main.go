@@ -24,22 +24,22 @@ func main() {
 	elev1 := ElevStat{
 		Dir: STOP,
 		Floor: 1,
-		InternalOrders: nil,
+		InternalOrders: []int{3,-1,-1,-1},
 	}
 	elev2 := ElevStat{
 		Dir: UP,
 		Floor: 1,
-		InternalOrders: nil,
+		InternalOrders: []int{2,-1,-1,-1},
 	}
 	elev3 := ElevStat{
 		Dir: DOWN,
 		Floor: 2,
-		InternalOrders: nil,
+		InternalOrders: []int{1,-1,-1,-1},
 	}
 	elev4 := ElevStat{
 		Dir: UP,
 		Floor: 0,
-		InternalOrders: nil,
+		InternalOrders: []int{2,-1,-1,-1},
 	}
 	orders := make(map[Order]struct{})
 	o1 := Order{
@@ -53,8 +53,8 @@ func main() {
 		Completed: false,
 	}
 	o3 := Order{
-		ButtonPress: BUTTON_CALL_DOWN,
-		Floor: 3,
+		ButtonPress: BUTTON_CALL_UP,
+		Floor: 0,
 		Completed: false,
 	}
 	o4 := Order{

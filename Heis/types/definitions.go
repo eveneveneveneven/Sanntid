@@ -30,7 +30,7 @@ type Order struct {
 type ElevStat struct {
 	Dir            int
 	Floor          int
-	InternalOrders []bool
+	InternalOrders []int
 }
 
 type NetworkMessage struct {
