@@ -33,7 +33,7 @@ func main() {
 	}
 	elev3 := ElevStat{
 		Dir: DOWN,
-		Floor: 3,
+		Floor: 2,
 		InternalOrders: nil,
 	}
 	elev4 := ElevStat{
@@ -44,7 +44,7 @@ func main() {
 	orders := make(map[Order]struct{})
 	o1 := Order{
 		ButtonPress: BUTTON_CALL_UP,
-		Floor: 2,
+		Floor: 1,
 		Completed: false,
 	}
 	o2 := Order{
@@ -59,13 +59,19 @@ func main() {
 	}
 	o4 := Order{
 		ButtonPress: BUTTON_CALL_UP,
-		Floor: 0,
+		Floor: 2,
+		Completed: false,
+	}
+	o5 := Order{
+		ButtonPress: BUTTON_CALL_DOWN,
+		Floor: 1,
 		Completed: false,
 	}
 	orders[o1] = struct{}{}
 	orders[o2] = struct{}{}
 	orders[o3] = struct{}{}
 	orders[o4] = struct{}{}
+	orders[o5] = struct{}{}
 
 	nm := &NetworkMessage{
 		Id: 0,
