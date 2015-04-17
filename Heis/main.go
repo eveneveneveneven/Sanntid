@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+<<<<<<< HEAD
 	"runtime"
+=======
+>>>>>>> 23d545ecd2d0f08b3f30f1b40de27a25060d8f4c
 
 	"./elev"
 	"./netstat"
@@ -12,7 +15,10 @@ import (
 )
 
 func main() {
+<<<<<<< HEAD
 	runtime.GOMAXPROCS(runtime.NumCPU())
+=======
+>>>>>>> 23d545ecd2d0f08b3f30f1b40de27a25060d8f4c
 	fmt.Println("Start program!")
 
 	// master notification channel

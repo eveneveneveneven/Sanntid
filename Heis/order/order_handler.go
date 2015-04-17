@@ -1,9 +1,13 @@
 package order
 
 import (
+<<<<<<< HEAD
 	"../elev"
 	"../types"
 	"fmt"
+=======
+	"../types"
+>>>>>>> 23d545ecd2d0f08b3f30f1b40de27a25060d8f4c
 )
 
 type OrderHandler struct {
@@ -35,6 +39,7 @@ func (oh *OrderHandler) Run() {
 }
 
 func (oh *OrderHandler) parseNewNetwork(updNet *types.NetworkMessage) {
+<<<<<<< HEAD
 	netStat := oh.currNetwork
 	if updNet != nil {
 		types.Clone(netStat, updNet)
@@ -59,5 +64,9 @@ func (oh *OrderHandler) parseNewNetwork(updNet *types.NetworkMessage) {
 	} else {
 		fmt.Println(`\t\x1b[31;1mError\x1b[0m |ohh.parseNewNetwork| [Got updNet
 			= nil], discard input\n`)
+=======
+	if updNet != nil {
+		types.Clone(oh.currNetwork, updNet)
+>>>>>>> 23d545ecd2d0f08b3f30f1b40de27a25060d8f4c
 	}
 }

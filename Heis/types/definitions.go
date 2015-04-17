@@ -31,7 +31,11 @@ type Order struct {
 type ElevStat struct {
 	Dir            int
 	Floor          int
+<<<<<<< HEAD
 	InternalOrders []int
+=======
+	InternalOrders []bool
+>>>>>>> 23d545ecd2d0f08b3f30f1b40de27a25060d8f4c
 }
 
 type NetworkMessage struct {

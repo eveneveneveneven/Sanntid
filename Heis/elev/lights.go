@@ -21,6 +21,7 @@ func clearAllLights() {
 func SetOrderLight(Order *types.Order) {
 	if (Order.ButtonPress >= 0 && Order.ButtonPress <= 2) &&
 		(Order.Floor >= 0 && Order.Floor <= 3) {
+
 		if Order.Completed {
 			driver.Heis_set_button_lamp(Order.ButtonPress, Order.Floor, 0)
 		} else {
