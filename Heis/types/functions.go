@@ -1,16 +1,20 @@
 package types
 
-import (
-	"bytes"
-	"encoding/gob"
-)
-
-func Clone(dst, src interface{}) {
-	buff := new(bytes.Buffer)
-	enc := gob.NewEncoder(buff)
-	dec := gob.NewDecoder(buff)
-	enc.Encode(src)
-	dec.Decode(dst)
+func Clone(dst, src *NetworkMessage) {
+	dst.Id = src.Id
+	length := len(src.Statuses)
+	if length == 0 {
+		dst.Statuses = nil
+	} else {
+		dst.Statuses = make([]ElevStat, length)
+		for i, status := range src.Statuses {
+			dst.Statuses[i] = status
+		}
+	}
+	dst.Orders = make(map[Order]struct{})
+	for order := range src.Orders {
+		dst.Orders[order] = struct{}{}
+	}
 }
 
 func NewElevStat() *ElevStat {

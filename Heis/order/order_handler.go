@@ -1,12 +1,14 @@
 package order
 
 import (
-	"../elev"
 	"../types"
+	"../elev"
 	"fmt"
 )
 
 type OrderHandler struct {
+	currObj *types.Order
+	lastObj *types.Order
 	currNetwork *types.NetworkMessage
 
 	netstatCurrentNetwork <-chan *types.NetworkMessage
@@ -17,6 +19,9 @@ type OrderHandler struct {
 func NewOrderHandler(netstatCurrNet chan *types.NetworkMessage,
 	elevNewObj chan *types.Order) *OrderHandler {
 	return &OrderHandler{
+		currObj: nil,
+		lastObj: new(types.Order),
+
 		currNetwork: new(types.NetworkMessage),
 
 		netstatCurrentNetwork: netstatCurrNet,
@@ -35,29 +40,27 @@ func (oh *OrderHandler) Run() {
 }
 
 func (oh *OrderHandler) parseNewNetwork(updNet *types.NetworkMessage) {
-	netStat := oh.currNetwork
-	if updNet != nil {
-		types.Clone(netStat, updNet)
-		for order := range netStat.Orders {
-			elev.SetOrderLight(&order)
+	elev.ClearAllLights()
+	for _, etg := range updNet.Statuses[updNet.Id].InternalOrders {
+		if etg == -1 {
+			break
 		}
-		// Dirty hack...
-		if len(netStat.Statuses) <= netStat.Id {
-			return
-		}
-		for _, floor := range netStat.Statuses[netStat.Id].InternalOrders {
-			if floor != -1 {
-				elev.SetOrderLight(&types.Order{
-					ButtonPress: types.BUTTON_INTERNAL,
-					Floor:       floor,
-					Completed:   false,
-				})
-			} else {
-				break
-			}
-		}
-	} else {
-		fmt.Println(`\t\x1b[31;1mError\x1b[0m |ohh.parseNewNetwork| [Got updNet
-			= nil], discard input\n`)
+		elev.SetOrderLight(&types.Order{
+			ButtonPress: types.BUTTON_INTERNAL,
+			Floor: etg,
+			Completed: false,
+		})
+	}
+	for order := range updNet.Orders {
+		elev.SetOrderLight(&order)
+	}
+	oh.currObj = costFunction(updNet)
+	if oh.currObj == nil {
+		return
+	}
+	fmt.Printf("CurrObj : %+v\n", oh.currObj)
+	if *oh.currObj != *oh.lastObj {
+		oh.elevGiveNewObj <- oh.currObj
+		oh.lastObj = oh.currObj
 	}
 }

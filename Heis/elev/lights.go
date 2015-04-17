@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func clearAllLights() {
+func ClearAllLights() {
 	for f := 0; f < 4; f++ {
 		for b := 0; b < 3; b++ {
 			if (f == 0 && b == 1) || (f == 3 && b == 0) {

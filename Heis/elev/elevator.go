@@ -44,7 +44,7 @@ func NewElevator(newObj chan *types.Order,
 		newElevStat: elevStat,
 	}
 	go floorIndicator()
-	clearAllLights()
+	ClearAllLights()
 	el.elevInit()
 	go buttonListener(el.notifyOrder)
 	go el.floorListener()
@@ -57,14 +57,17 @@ func (el *Elevator) Run() {
 	for {
 		select {
 		case newObj := <-el.newObj:
-			if objQuit != nil {
+			fmt.Printf("NEW OBJ %+v\n", newObj)
+			if el.obj != nil {
 				objQuit <- true
 			}
 			objQuit = make(chan bool)
 			el.obj = newObj
 			go el.goToObjective(objQuit)
 		case <-el.objDone:
+			fmt.Println("Obj done")
 			el.openDoors()
+			el.obj.Completed = true
 			el.notifyOrder <- el.obj
 			el.obj = nil
 		case newDir := <-el.dirLn:
