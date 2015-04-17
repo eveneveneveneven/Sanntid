@@ -1,96 +1,127 @@
 package network
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"time"
+
+	"../types"
 )
 
 type Hub struct {
-	master bool
-	id int // 0 equals master, else slave
+	id int
 
-	numConns int
+	becomeMaster chan bool
 
-	udp *UDPHub
-	tcp *TCPHub
+	networkStatus *types.NetworkMessage
+	netMsgUpd     *types.NetworkMessage
 
+	foundMaster   chan string
 	missingMaster chan bool
-	stop chan bool
+
+	messageRecieved chan *types.NetworkMessage
+	messageSend     chan *types.NetworkMessage
+
+	netstatNewMsg chan *types.NetworkMessage
+	netstatUpdate chan *types.NetworkMessage
 }
 
-func NewHub() *Hub {
-	var h Hub
+func NewHub(becomeMaster chan bool,
+	netStatSend, netStatRec chan *types.NetworkMessage) *Hub {
+	return &Hub{
+		id: -1,
 
-	h.id       = -1
-	h.master   = false
-	h.numConns = 0
+		becomeMaster: becomeMaster,
 
-	h.udp = newUDPHub()
-	h.tcp = newTCPHub()
+		networkStatus: &types.NetworkMessage{
+			Id: -1,
+			Statuses: []types.ElevStat{
+				*types.NewElevStat(),
+			},
+			Orders: make(map[types.Order]struct{}),
+		},
+		netMsgUpd: &types.NetworkMessage{
+			Id: -1,
+			Statuses: []types.ElevStat{
+				*types.NewElevStat(),
+			},
+			Orders: make(map[types.Order]struct{}),
+		},
 
-	h.missingMaster = make(chan bool)
-	h.stop = make(chan bool, 2)
+		foundMaster:   make(chan string),
+		missingMaster: make(chan bool),
 
-	return &h
+		messageRecieved: make(chan *types.NetworkMessage),
+		messageSend:     make(chan *types.NetworkMessage),
+
+		netstatNewMsg: netStatSend,
+		netstatUpdate: netStatRec,
+	}
 }
 
 func (h *Hub) Run() {
-	newMaster, err := h.resolveMasterNetwork()
-	if err != nil {
-		fmt.Printf("Some error %v, exit program\n", err)
-		os.Exit(1)
-	}
+	fmt.Println("Start network Hub!")
+	cm := NewConnManager(h.messageRecieved, h.messageSend)
+	go cm.run()
+	go startUDPListener(h.foundMaster, h.missingMaster)
 
-	if newMaster {
-		fmt.Println("I am Master!")
-		h.becomeMaster()
-	} else {
-		fmt.Println("I am a slave...")
-		go h.udp.alertWhenMaster(h.missingMaster)
-	}
-
+	// Slave loop
+	connected := false
+slaveloop:
 	for {
 		select {
-		case <-h.missingMaster:
-			if h.id == 1 {
-				h.becomeMaster()
-			} else {
-				h.id -= 1
-				h.udp.alertWhenMaster(h.missingMaster)
+		case masterIp := <-h.foundMaster:
+			if connected {
+				continue
 			}
-		case <-h.stop:
+			if err := cm.connectToNetwork(masterIp); err != nil {
+				fmt.Printf("\x1b[31;1mError\x1b[0m |Hub.Run| [%v], exit program\n", err)
+				os.Exit(1)
+			}
+			connected = true
+		case <-h.missingMaster:
+			switch h.id {
+			case 1:
+				fmt.Println("Master is dead, I am Master!")
+				h.id = 0
+				break slaveloop
+			case -1:
+				fmt.Println("There is no Master, claim Master!")
+				h.id = 0
+				break slaveloop
+			default:
+				fmt.Println("Master is dead, continue as slave...")
+				h.id--
+			}
+			connected = false
+		case msgRecieve := <-h.messageRecieved:
+			h.parseMessage(msgRecieve)
+		case netStatUpd := <-h.netstatUpdate:
+			h.netMsgUpd = netStatUpd
+		}
+	}
+
+	close(h.becomeMaster)
+
+	// Master loop
+	go startUDPBroadcast()
+	tick := time.Tick(types.SEND_INTERVAL * time.Millisecond)
+	for {
+		select {
+		case netStatUpd := <-h.netstatUpdate:
+			types.Clone(h.networkStatus, netStatUpd)
+		case msgRec := <-h.messageRecieved:
+			h.netstatNewMsg <- msgRec
+		case <-tick:
+			h.netstatNewMsg <- nil
+			h.messageSend <- h.networkStatus
 		}
 	}
 }
 
-func (h *Hub) becomeMaster() {
-	fmt.Println("Becoming Master")
-	h.master = true
-	go h.udp.broadcastMaster(h.stop)
-	go h.tcp.startMasterServer(h.stop)
-}
-
-func (h *Hub) resolveMasterNetwork() (bool, error) {
-	found, masterIP, err := h.udp.findMaster(true);
-	if err != nil {
-		return false, err
-	}
-
-	if found {
-		ok, id, err := h.tcp.requestConnToNetwork(masterIP)
-		if err != nil {
-			return false, err
-		}
-		if !ok {
-			return false, errors.New("Refused connection to network")
-		}
-
-		fmt.Printf("Got ID %v\n", id)
-		h.id = id
-		return false, nil
-	} else {
-		h.id = 0
-		return true, nil
-	}
+func (h *Hub) parseMessage(msg *types.NetworkMessage) {
+	h.id = msg.Id
+	h.networkStatus = msg
+	h.netstatNewMsg <- msg
+	h.messageSend <- h.netMsgUpd
 }

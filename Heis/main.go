@@ -2,38 +2,47 @@ package main
 
 import (
 	"fmt"
-	"./internal"
-	"./driver"
 	"runtime"
-	//"./network"
-)
 
+	"./elev"
+	"./netstat"
+	"./network"
+	"./order"
+	"./types"
+)
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	fmt.Println("Start main!")
-	if driver.Heis_init() {
-		fmt.Println("init success")
-	} else {
-		fmt.Println("init failed")
-	}
-	go internal.Internal()
-	select{}
-	/*for i := 0; i < 3; i++ {
-		driver.Heis_set_speed(300)
-		for driver.Heis_get_floor() != 1 {}
-		
-		driver.Heis_set_speed(-300)
-		for driver.Heis_get_floor() != 0 {}
-	}
-	driver.Heis_set_speed(0)
-	select{}
-	*/
-	/*
-	udp := network.NewUDPHub()
-	if found, _ := udp.FindMaster(); found {
-		fmt.Println("Found master!")
-	} else {
-		fmt.Println("Did not find master!")
-	}*/
+	fmt.Println("Start program!")
+
+	// master notification channel
+	becomeMaster := make(chan bool)
+
+	// NETSTAT <--> NETHUB
+	nethubToNetstat := make(chan *types.NetworkMessage)
+	netstatToNethub := make(chan *types.NetworkMessage)
+
+	// NETSTAT --> ORDER
+	netstatToOrder := make(chan *types.NetworkMessage)
+
+	// ELEV --> NETSTAT
+	elevNewElevStat := make(chan *types.ElevStat)
+	elevOrder := make(chan *types.Order)
+
+	// ORDER --> ELEV
+	orderToElev := make(chan *types.Order)
+
+	// Init of modules
+	elevator := elev.NewElevator(orderToElev, elevOrder, elevNewElevStat)
+	orderHandler := order.NewOrderHandler(netstatToOrder, orderToElev)
+	networkHub := network.NewHub(becomeMaster, nethubToNetstat, netstatToNethub)
+	netstatHandler := netstat.NewNetstatHandler(becomeMaster, nethubToNetstat, netstatToNethub,
+		netstatToOrder, elevNewElevStat, elevOrder)
+
+	go elevator.Run()
+	go networkHub.Run()
+	go orderHandler.Run()
+	go netstatHandler.Run()
+
+	select {}
 }

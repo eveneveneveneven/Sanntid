@@ -5,25 +5,15 @@ const (
 	UDP_PORT = 20011
 	TCP_PORT = 30011
 
-	MAX_ELEVATORS = 10
+	MAXINT = ^int(0)
+
+	SEND_INTERVAL       = 250 // milliseconds
+	BUFFER_MSG_RECIEVED = 20
 )
 
 // Network structure for passing message between Master/slave
 type networkMessage struct {
-	Header int
-	Bool bool
-	ID int
+	Id     int
+	Status string
+	Orders string
 }
-
-// Declerations for networkMessage struct
-var (
-	ID_REQ_CONN   = 1
-	ID_REQ_ACCEPT = 2
-	ID_REQ_DENIED = 3
-)
-
-var (				
-	NM_REQ_CONN   = &networkMessage{ID_REQ_CONN,   false, -1}
-	NM_REQ_ACCEPT = &networkMessage{ID_REQ_ACCEPT, true,  -1}
-	NM_REQ_DENIED = &networkMessage{ID_REQ_DENIED, false, -1}
-)
