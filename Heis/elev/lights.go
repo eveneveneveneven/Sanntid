@@ -4,7 +4,6 @@ import (
 	"../driver"
 	"../types"
 	"fmt"
-	"time"
 )
 
 func ClearAllLights() {
@@ -40,6 +39,5 @@ func floorIndicator() {
 		if floor != -1 {
 			driver.Heis_set_floor_indicator(floor)
 		}
-		time.Sleep(50 * time.Millisecond)
 	}
 }

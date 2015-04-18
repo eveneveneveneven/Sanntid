@@ -36,6 +36,6 @@ type ElevStat struct {
 
 type NetworkMessage struct {
 	Id       int
-	Statuses []ElevStat
+	Statuses map[int]ElevStat
 	Orders   map[Order]struct{}
 }

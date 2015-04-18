@@ -28,7 +28,7 @@ type connManager struct {
 	wg *sync.WaitGroup
 }
 
-func NewConnManager(hbRec, hbSend chan *types.NetworkMessage) *connManager {
+func newConnManager(hbRec, hbSend chan *types.NetworkMessage) *connManager {
 	return &connManager{
 		masterIP: "",
 		currId:   1,

@@ -19,16 +19,16 @@ type Elevator struct {
 
 	dirLn   chan int
 	floorLn chan int
-
-	newObj  <-chan *types.Order
 	objDone chan bool
 
-	notifyOrder chan<- *types.Order
+	orderUpdOrder chan<- *types.Order
+	orderNewObj   <-chan *types.Order
+
 	newElevStat chan<- *types.ElevStat
 }
 
-func NewElevator(newObj chan *types.Order,
-	order chan *types.Order, elevStat chan *types.ElevStat) *Elevator {
+func NewElevator(orderUpdOrder, orderNewObj chan *types.Order,
+	elevStat chan *types.ElevStat) *Elevator {
 	driver.Heis_init()
 	el := &Elevator{
 		state: types.NewElevStat(),
@@ -36,17 +36,17 @@ func NewElevator(newObj chan *types.Order,
 
 		dirLn:   make(chan int),
 		floorLn: make(chan int),
-
-		newObj:  newObj,
 		objDone: make(chan bool),
 
-		notifyOrder: order,
+		orderUpdOrder: orderUpdOrder,
+		orderNewObj:   orderNewObj,
+
 		newElevStat: elevStat,
 	}
 	go floorIndicator()
 	ClearAllLights()
 	el.elevInit()
-	go buttonListener(el.notifyOrder)
+	go buttonListener(el.orderUpdOrder)
 	go el.floorListener()
 	return el
 }
@@ -56,8 +56,8 @@ func (el *Elevator) Run() {
 	var objQuit chan bool = nil
 	for {
 		select {
-		case newObj := <-el.newObj:
-			fmt.Printf("NEW OBJ %+v\n", newObj)
+		case newObj := <-el.orderNewObj:
+			fmt.Printf("&&&> ELEV NEW OBJ %+v\n", newObj)
 			if el.obj != nil {
 				objQuit <- true
 			}
@@ -65,19 +65,23 @@ func (el *Elevator) Run() {
 			el.obj = newObj
 			go el.goToObjective(objQuit)
 		case <-el.objDone:
-			fmt.Println("Obj done")
 			el.openDoors()
 			el.obj.Completed = true
-			el.notifyOrder <- el.obj
+			fmt.Println("&&&> TRYING TO SEND1")
+			el.orderUpdOrder <- el.obj
+			fmt.Println("&&&> SWAG")
 			el.obj = nil
+			fmt.Println("&&&> ELEV OBJ DONE")
 		case newDir := <-el.dirLn:
-			fmt.Println("New direction", newDir)
+			fmt.Println("&&&> TRYING TO DIR")
 			el.state.Dir = newDir
+			fmt.Println("&&&> FLOOT")
 			el.newElevStat <- el.state
 		case newFloor := <-el.floorLn:
-			fmt.Println("New floor", newFloor)
 			el.state.Floor = newFloor
+			fmt.Println("&&&> TRYING TO FLOOR")
 			el.newElevStat <- el.state
+			fmt.Println("&&&> YES")
 		}
 	}
 }

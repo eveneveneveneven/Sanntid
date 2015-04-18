@@ -2,14 +2,9 @@ package types
 
 func Clone(dst, src *NetworkMessage) {
 	dst.Id = src.Id
-	length := len(src.Statuses)
-	if length == 0 {
-		dst.Statuses = nil
-	} else {
-		dst.Statuses = make([]ElevStat, length)
-		for i, status := range src.Statuses {
-			dst.Statuses[i] = status
-		}
+	dst.Statuses = make(map[int]ElevStat)
+	for id, elev := range src.Statuses {
+		dst.Statuses[id] = elev
 	}
 	dst.Orders = make(map[Order]struct{})
 	for order := range src.Orders {
@@ -28,7 +23,7 @@ func NewElevStat() *ElevStat {
 func NewNetworkMessage() *NetworkMessage {
 	return &NetworkMessage{
 		Id:       -1,
-		Statuses: nil,
+		Statuses: make(map[int]ElevStat),
 		Orders:   make(map[Order]struct{}),
 	}
 }
