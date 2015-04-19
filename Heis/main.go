@@ -17,12 +17,15 @@ func main() {
 	// master notification channel
 	becomeMaster := make(chan bool)
 
-	// Init of modules
-	elevatorHub := elev.NewElevator()
-	networkHub := network.NewNetworkHub()
+	nethubToElevCh := make(chan *types.NetworkMessage)
+	elevToNethubCh := make(chan *types.NetworkMessage)
 
-	go elevator.Run(becomeMaster)
-	go networkHub.Run(becomeMaster)
+	// Init of modules
+	elevatorHub := elev.NewElevatorHub(becomeMaster, elevToNethubCh, nethubToElevCh)
+	networkHub := network.NewNetworkHub(becomeMaster, nethubToElevCh, elevToNethubCh)
+
+	go elevatorHub.Run()
+	go networkHub.Run()
 
 	select {}
 }

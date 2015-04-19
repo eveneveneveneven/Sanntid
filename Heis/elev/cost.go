@@ -1,8 +1,9 @@
 package elev
 
 import (
-	. "../types"
 	"fmt"
+
+	. "../types"
 )
 
 func abs(value int) int {

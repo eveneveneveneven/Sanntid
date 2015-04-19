@@ -14,102 +14,108 @@ type NetworkHub struct {
 	becomeMaster chan bool
 
 	networkStatus *types.NetworkMessage
+	cm            *connManager
 
 	foundMaster   chan string
 	missingMaster chan bool
 
-	messageRecieved chan *types.NetworkMessage
-	messageSend     chan *types.NetworkMessage
+	msgRecieve    chan *types.NetworkMessage
+	msgSendGlobal chan *types.NetworkMessage
+	msgSendLocal  chan *types.NetworkMessage
 
 	netstatNewMsg chan *types.NetworkMessage
 	netstatUpdate chan *types.NetworkMessage
+	netstatTick   chan bool
 }
 
 func NewNetworkHub(becomeMaster chan bool,
-	elevSendNewNetstat, elevRecUpd chan *types.NetworkMessage) *NetworkHub {
+	sendLocalCh, recieveCh chan *types.NetworkMessage) *NetworkHub {
 	nh := &NetworkHub{
 		id: -1,
 
 		becomeMaster: becomeMaster,
 
 		networkStatus: types.NewNetworkMessage(),
+		cm:            nil,
 
 		foundMaster:   make(chan string),
 		missingMaster: make(chan bool),
 
-		messageRecieved: make(chan *types.NetworkMessage),
-		messageSend:     make(chan *types.NetworkMessage),
+		msgRecieve:    recieveCh,
+		msgSendGlobal: make(chan *types.NetworkMessage),
+		msgSendLocal:  sendLocalCh,
 
 		netstatNewMsg: make(chan *types.NetworkMessage),
 		netstatUpdate: make(chan *types.NetworkMessage),
+		netstatTick:   make(chan bool),
 	}
+	nh.cm = newConnManager(nh.msgRecieve, nh.msgSendGlobal)
+	go startUDPListener(nh.foundMaster, nh.missingMaster)
+	go nh.cm.run()
 	return nh
 }
 
-func (h *NetworkHub) Run() {
-	fmt.Println("Start network NetworkHub!")
-
-	cm := newConnManager(h.messageRecieved, h.messageSend)
-	go cm.run()
-	go startUDPListener(h.foundMaster, h.missingMaster)
+func (nh *NetworkHub) Run() {
+	fmt.Println("Start NetworkHub!")
 
 	connected := false
 	// Slave loop
 slaveloop:
 	for {
 		select {
-		case masterIp := <-h.foundMaster:
+		case masterIp := <-nh.foundMaster:
 			if connected {
 				continue
 			}
-			if err := cm.connectToNetwork(masterIp); err != nil {
+			if err := nh.cm.connectToNetwork(masterIp); err != nil {
 				fmt.Printf("\x1b[31;1mError\x1b[0m |NetworkHub.Run| [%v], exit program\n", err)
 				os.Exit(1)
 			}
 			connected = true
-		case <-h.missingMaster:
-			switch h.id {
+		case <-nh.missingMaster:
+			switch nh.id {
 			case 1:
 				fmt.Println("Master is dead, I am Master!")
-				h.id = 0
+				nh.id = 0
 				break slaveloop
 			case -1:
 				fmt.Println("There is no Master, claim Master!")
-				h.id = 0
+				nh.id = 0
 				break slaveloop
 			default:
 				fmt.Println("Master is dead, continue as slave...")
-				h.id--
+				nh.id--
 			}
 			connected = false
-		case msgRecieve := <-h.messageRecieved:
-			h.parseMessage(msgRecieve)
+		case msgRecieve := <-nh.msgRecieve:
+			nh.parseMessage(msgRecieve)
 		}
 	}
 
-	close(h.becomeMaster)
+	close(nh.becomeMaster)
 
 	go startUDPBroadcast()
-	go newNetStatManager(h.netstatNewMsg, h.netstatUpdate).run()
+	go newNetStatManager(nh.netstatNewMsg, nh.netstatUpdate, nh.netstatTick).run()
 
 	tick := time.Tick(types.SEND_INTERVAL * time.Millisecond)
 	// Master loop
 	for {
 		select {
-		case msgRec := <-h.messageRecieved:
-			h.netstatNewMsg <- msgRec
+		case msgRec := <-nh.msgRecieve:
+			nh.netstatNewMsg <- msgRec
 		case <-tick:
-			h.netstatUpdate <- nil
-		case newNetstat := <-h.netstatUpdate:
-			h.networkStatus = newNetstat
-			h.messageSend <- h.networkStatus
+			nh.netstatTick <- true
+		case newNetstat := <-nh.netstatUpdate:
+			nh.networkStatus = newNetstat
+			nh.msgSendGlobal <- newNetstat
+			nh.msgSendLocal <- newNetstat
 		}
 	}
 }
 
-func (h *NetworkHub) parseMessage(msg *types.NetworkMessage) {
-	h.id = msg.Id
-	h.networkStatus = msg
-	h.netstatNewMsg <- msg
-	h.messageSend <- h.netMsgUpd
+func (nh *NetworkHub) parseMessage(msg *types.NetworkMessage) {
+	nh.id = msg.Id
+	nh.msgSendGlobal <- nh.networkStatus
+	nh.networkStatus = msg
+	nh.msgSendLocal <- msg
 }

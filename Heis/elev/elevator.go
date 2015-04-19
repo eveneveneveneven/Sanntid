@@ -21,14 +21,14 @@ type Elevator struct {
 	floorLn chan int
 	objDone chan bool
 
-	orderUpdOrder chan<- *types.Order
-	orderNewObj   <-chan *types.Order
+	newElevstat chan *types.ElevStat
 
-	newElevStat chan<- *types.ElevStat
+	newObj      chan *types.Order
+	objComplete chan *types.Order
 }
 
-func NewElevator(orderUpdOrder, orderNewObj chan *types.Order,
-	elevStat chan *types.ElevStat) *Elevator {
+func newElevator(newElevstatCh chan *types.ElevStat,
+	newObjCh, objCompleteCh chan *types.Order) *Elevator {
 	driver.Heis_init()
 	el := &Elevator{
 		state: types.NewElevStat(),
@@ -38,50 +38,42 @@ func NewElevator(orderUpdOrder, orderNewObj chan *types.Order,
 		floorLn: make(chan int),
 		objDone: make(chan bool),
 
-		orderUpdOrder: orderUpdOrder,
-		orderNewObj:   orderNewObj,
+		newElevstat: newElevstatCh,
 
-		newElevStat: elevStat,
+		newObj:      newObjCh,
+		objComplete: objCompleteCh,
 	}
 	go floorIndicator()
-	ClearAllLights()
+	clearAllLights()
 	el.elevInit()
-	go buttonListener(el.orderUpdOrder)
 	go el.floorListener()
 	return el
 }
 
-func (el *Elevator) Run() {
-	fmt.Println("Elevator Run")
+func (el *Elevator) run() {
+	fmt.Println("Start Elevator!")
 	var objQuit chan bool = nil
 	for {
 		select {
-		case newObj := <-el.orderNewObj:
-			fmt.Printf("&&&> ELEV NEW OBJ %+v\n", newObj)
+		case obj := <-el.newObj:
 			if el.obj != nil {
 				objQuit <- true
 			}
 			objQuit = make(chan bool)
-			el.obj = newObj
+			el.obj = obj
 			go el.goToObjective(objQuit)
 		case <-el.objDone:
 			el.openDoors()
 			el.obj.Completed = true
-			fmt.Println("&&&> TRYING TO SEND1")
-			el.orderUpdOrder <- el.obj
-			fmt.Println("&&&> SWAG")
+			el.objComplete <- el.obj
 			el.obj = nil
-			fmt.Println("&&&> ELEV OBJ DONE")
+			fmt.Println("Objective complete!")
 		case newDir := <-el.dirLn:
-			fmt.Println("&&&> TRYING TO DIR")
 			el.state.Dir = newDir
-			fmt.Println("&&&> FLOOT")
-			el.newElevStat <- el.state
+			el.newElevstat <- el.state
 		case newFloor := <-el.floorLn:
 			el.state.Floor = newFloor
-			fmt.Println("&&&> TRYING TO FLOOR")
-			el.newElevStat <- el.state
-			fmt.Println("&&&> YES")
+			el.newElevstat <- el.state
 		}
 	}
 }
@@ -102,7 +94,6 @@ func (el *Elevator) elevInit() {
 		driver.Heis_set_speed(0)
 		el.state.Floor = floor
 	}
-	fmt.Println("Elevator init done")
 }
 
 func (el *Elevator) floorListener() {

@@ -1,6 +1,8 @@
 package network
 
 import (
+	"fmt"
+
 	"../types"
 )
 
@@ -9,15 +11,20 @@ type netStatManager struct {
 
 	newMsg chan *types.NetworkMessage
 	update chan *types.NetworkMessage
+	tick   chan bool
 }
 
-func newNetStatManager(newMsg, update chan *types.NetworkMessage) *netStatManager {
-	return &netStatManager{
+func newNetStatManager(newMsgCh, updateCh chan *types.NetworkMessage,
+	tickCh chan bool) *netStatManager {
+	ns := &netStatManager{
 		netstat: types.NewNetworkMessage(),
 
-		newMsg: newMsg,
-		update: update,
+		newMsg: newMsgCh,
+		update: updateCh,
+		tick:   tickCh,
 	}
+	ns.netstat.Id = 0
+	return ns
 }
 
 func (ns *netStatManager) run() {
@@ -25,7 +32,7 @@ func (ns *netStatManager) run() {
 		select {
 		case newMsg := <-ns.newMsg:
 			ns.parseNewMsg(newMsg)
-		case <-ns.update:
+		case <-ns.tick:
 			ns.sendUpdate()
 		}
 	}
@@ -36,6 +43,7 @@ func (ns *netStatManager) parseNewMsg(msg *types.NetworkMessage) {
 	ns.netstat.Statuses[id] = msg.Statuses[id]
 	for order := range msg.Orders {
 		if order.Completed {
+			order.Completed = false
 			delete(ns.netstat.Orders, order)
 		} else if _, ok := ns.netstat.Orders[order]; !ok {
 			ns.netstat.Orders[order] = struct{}{}
@@ -44,10 +52,13 @@ func (ns *netStatManager) parseNewMsg(msg *types.NetworkMessage) {
 }
 
 func (ns *netStatManager) sendUpdate() {
+	fmt.Println("netstat ::", ns.netstat)
 	nm := types.NewNetworkMessage()
 	types.Clone(nm, ns.netstat)
 	ns.update <- nm
-	masterStat := ns.netstat.Statuses[0]
-	ns.netstat.Statuses = make(map[int]types.ElevStat)
-	ns.netstat.Statuses[0] = masterStat
+	for id := range ns.netstat.Statuses {
+		if id != 0 {
+			delete(ns.netstat.Statuses, id)
+		}
+	}
 }
