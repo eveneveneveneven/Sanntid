@@ -10,7 +10,7 @@ import (
 const (
 	SPEED         = 150
 	BUFFER_ORDERS = 10
-	DOOR_TIMER    = 500 // milliseconds
+	DOOR_TIMER    = 150 // milliseconds
 )
 
 type Elevator struct {
@@ -59,7 +59,14 @@ func (el *Elevator) run() {
 			fmt.Println("elev new obj")
 			if el.obj != nil {
 				fmt.Println("elev quitting curr obj")
-				objQuit <- true
+				select {
+				case objQuit <- true:
+					fmt.Println("quitting confirmed")
+				default:
+					fmt.Println("Hmm. continue?")
+					continue
+				}
+
 			}
 			objQuit = make(chan bool)
 			el.obj = obj
@@ -128,10 +135,13 @@ func (el *Elevator) goToObjective(objQuit chan bool) {
 	}(stop)
 	select {
 	case <-objQuit:
+		fmt.Println("elev obj quit")
 	case <-stop:
+		fmt.Println("elev stopping")
 		el.goDirection(types.STOP)
 		el.objDone <- true
 	}
+	fmt.Println("elev gotoObj done")
 }
 
 func (el *Elevator) goDirection(dir int) {

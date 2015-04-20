@@ -40,8 +40,8 @@ func (oh *orderHandler) parseNewNetwork(netstat *types.NetworkMessage) {
 		oh.lastObj = nil
 		return
 	}
-	//fmt.Printf("@@@> CurrObj : %v\n@@@> LastObj : %v\n", oh.currObj, oh.lastObj)
-	if oh.lastObj == nil || oh.currObj.Floor != oh.lastObj.Floor {
+	fmt.Printf("@@@> CurrObj : %v\n@@@> LastObj : %v\n", oh.currObj, oh.lastObj)
+	if oh.lastObj == nil || *oh.currObj != *oh.lastObj {
 		fmt.Println("new obj ::", oh.currObj)
 		oh.sendNewObj <- oh.currObj
 		oh.lastObj = oh.currObj

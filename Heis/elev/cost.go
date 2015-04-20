@@ -16,6 +16,7 @@ func abs(value int) int {
 var optimal_id int
 
 func costFunction(network_msg *NetworkMessage) *Order {
+	fmt.Println("inn netmsg ::", network_msg)
 	noInternal := true
 	for _, order := range network_msg.Statuses[network_msg.Id].InternalOrders {
 		if order != -1 {
@@ -29,10 +30,18 @@ func costFunction(network_msg *NetworkMessage) *Order {
 
 	number_of_elevs := len(network_msg.Statuses)
 	number_of_orders := len(network_msg.Orders) + number_of_elevs
+	fmt.Println("numelev ::", number_of_elevs)
+	fmt.Println("numorder ::", number_of_orders)
+	cost_id_order := make([][]int, number_of_elevs+2)
+	for i := 0; i < number_of_elevs+2; i++ {
+		cost_id_order[i] = make([]int, number_of_orders)
+	}
 
-	var cost_id_order [10][14]int
+	dirs := make([]int, number_of_elevs)
+
 	j := 0
 	//taken_order_number :=0
+	internal_dir_change := make([]int, number_of_elevs)
 	for order := range network_msg.Orders {
 		order_button_type := order.ButtonPress
 		order_button_floor := order.Floor
@@ -64,13 +73,14 @@ func costFunction(network_msg *NetworkMessage) *Order {
 			dir_order := 0
 			dir_elev := elevStat.Dir
 			floor_elev := elevStat.Floor
+			dirs[id] = dir_elev
 			dir_internal_order := -1
 			if internal_order-floor_elev < 0 && internal_order != -1 {
 				dir_internal_order = 1
 			} else if internal_order-floor_elev > 0 && internal_order != -1 {
 				dir_internal_order = 0
 			} else {
-				dir_internal_order = -1
+				dir_internal_order = 2
 			}
 			//internal_orders_elev := elevStat.InternalOrders
 			diff_cost = abs(order_button_floor - floor_elev)
@@ -81,68 +91,78 @@ func costFunction(network_msg *NetworkMessage) *Order {
 			}
 
 			if dir_order == dir_elev || dir_elev == STOP {
-				dir_cost = 2
+				dir_cost = 0
 			} else {
 				dir_cost += 5
 			}
 			if internal_order != -1 {
 				if order_button_value == dir_internal_order &&
-					dir_internal_order == 1 && order_button_floor >= internal_order {
+					dir_internal_order == 1 && order_button_floor > internal_order {
 					if floor_elev == order_button_floor && dir_elev != STOP {
-						order_dir_cost = 7
+						order_dir_cost = 12
 					} else {
-						order_dir_cost = -7
+						order_dir_cost = -8
 					}
 				} else if order_button_value == dir_internal_order &&
-					dir_internal_order == 0 && order_button_floor <= internal_order {
+					dir_internal_order == 0 && order_button_floor < internal_order {
 					if floor_elev == order_button_floor && dir_elev != STOP {
-						order_dir_cost = 7
+						order_dir_cost = 12
 					} else {
-						order_dir_cost = -7
+						order_dir_cost = -8
+
 					}
+				} else {
+					order_dir_cost = 15
 				}
 			}
 			if internal_order == -1 {
-				if floor_elev == order_button_floor {
-					order_dir_cost = 7
+				if floor_elev == order_button_floor && dir_elev != STOP {
+					order_dir_cost = 10
 				} else {
-					order_dir_cost = 2
+					order_dir_cost = 8
 				}
 			}
 
-			/*for i:=0; i<10; i++ {
-				if id==active_orders[i]{
-					multiple_orders_cost +=8
-				}
-			}*/
-
 			total_cost := dir_cost + diff_cost + order_dir_cost
-			//fmt.Println("Id: ", id, "direction: ", dir_elev,  ", dir int: ",
-			//	dir_internal_order, ", Total cost: ", total_cost, "\n")
-			/*if total_cost< lowest_total_cost {
-				lowest_total_cost = total_cost
-				optimal_id = id
-			}*/
+			internal_dir_change_cost := 0
+			if dir_internal_order != dir_elev && dir_elev != STOP && internal_order != -1 {
+				internal_dir_change_cost = 40
+			} else {
+				internal_dir_change_cost = 0
+			}
+			fmt.Println("j ::", j)
 			cost_id_order[0][j] = order_button_floor
 			cost_id_order[1][j] = order_button_value
 			cost_id_order[id+2][j] = total_cost
-			if internal_order != -1 {
-				cost_id_order[id+2][j+number_of_orders-number_of_elevs] = -2
-			} else {
-				cost_id_order[id+2][j+number_of_orders-number_of_elevs] = 100
-			}
+			internal_dir_change[id] = internal_dir_change_cost
 
 		}
 		j++
 	}
+
+	fmt.Println(cost_id_order)
+	for id, elevstat := range network_msg.Statuses {
+		if elevstat.InternalOrders[0] != -1 {
+			cost_id_order[id+2][id+number_of_orders-number_of_elevs] = -3 + internal_dir_change[id]
+		} else {
+			cost_id_order[id+2][id+number_of_orders-number_of_elevs] = 100
+		}
+		for i := 0; i < number_of_elevs; i++ {
+			if i != id {
+				cost_id_order[id+2][i+number_of_orders-len(network_msg.Statuses)] = 100
+			}
+		}
+
+	}
+	fmt.Println(cost_id_order)
 	cost_id_order[0][j] = network_msg.Statuses[0].InternalOrders[0]
 	cost_id_order[1][j] = BUTTON_INTERNAL
 	//print_matrix(cost_id_order, number_of_elevs, number_of_orders)
 	return sort_according_to_ordered_values(network_msg.Id, cost_id_order,
-		number_of_elevs, number_of_orders)
+		number_of_elevs, number_of_orders, dirs)
 
 }
-func print_matrix(cost_matrix [10][14]int, num_elevs int, num_orders int) {
+func print_matrix(cost_matrix [][]int, num_elevs int, num_orders int) {
 	for i := 0; i < num_elevs+2; i++ {
 		for j := 0; j < num_orders; j++ {
 			fmt.Print(cost_matrix[i][j], ", ")
@@ -152,26 +172,26 @@ func print_matrix(cost_matrix [10][14]int, num_elevs int, num_orders int) {
 	fmt.Println()
 }
 
-func switch_rows(cost_matrix [10][14]int, switching_floor int,
-	lowest_order int) [10][14]int {
-	var temp_array [10]int
-	for i := 0; i < 10; i++ {
+func switch_rows(cost_matrix [][]int, switching_floor int,
+	lowest_order int) [][]int {
+	temp_array := make([]int, len(cost_matrix))
+	for i := 0; i < len(temp_array); i++ {
 		temp_array[i] = cost_matrix[i][switching_floor]
 		cost_matrix[i][switching_floor] = cost_matrix[i][lowest_order]
 	}
-	for i := 0; i < 10; i++ {
+	for i := 0; i < len(temp_array); i++ {
 		cost_matrix[i][lowest_order] = temp_array[i]
 	}
 	return cost_matrix
 }
 
-func sort_according_to_ordered_values(id int, cost_matrix [10][14]int,
-	num_elevs int, num_orders int) *Order {
+func sort_according_to_ordered_values(id int, cost_matrix [][]int,
+	num_elevs int, num_orders int, dirs []int) *Order {
 	lowest_order := 10
-	for i := 0; i < num_orders-4; i++ {
+	for i := 0; i < num_orders-num_elevs; i++ {
 		lowest_floor := 10
 		lowest_dir := 3
-		for j := i; j < num_orders-4; j++ {
+		for j := i; j < num_orders-num_elevs; j++ {
 			if cost_matrix[0][j] < lowest_floor {
 				lowest_floor = cost_matrix[0][j]
 				lowest_order = j
@@ -187,12 +207,41 @@ func sort_according_to_ordered_values(id int, cost_matrix [10][14]int,
 	}
 	//fmt.Println("\n")
 	//print_matrix(cost_matrix, num_elevs, num_orders)
+	cost_matrix = check_for_similar_buttons(cost_matrix, num_elevs, num_orders, dirs)
 	return smallest_total_cost(id, cost_matrix, num_elevs, num_orders)
 }
 
-func add_multiple_orders_penalty(cost_matrix [10][14]int, num_elevs int,
-	num_orders int, best_id int, order_taken int) [10][14]int {
+func check_for_similar_buttons(cost_matrix [][]int,
+	num_elevs int, num_orders int, dirs []int) [][]int {
+	for j := 0; j < num_elevs; j++ {
+		number_of_occuring_down_values := 0
+		number_of_occuring_up_values := 0
+		for i := 0; i < num_orders-num_elevs; i++ {
+			fmt.Println(cost_matrix[1][num_orders-num_elevs-i-1], dirs[j])
+			if cost_matrix[1][num_orders-num_elevs-i-1] == 1 && dirs[j] != 1 {
+				for k := 2; k < num_elevs+2; k++ {
+					fmt.Println("sub'ed some ", num_orders-num_elevs-i-1)
+					cost_matrix[k][num_orders-num_elevs-i-1] += number_of_occuring_down_values * 6
+				}
+				number_of_occuring_down_values += 1
+			}
+			if cost_matrix[1][i] == 0 && dirs[j] != 0 {
+				fmt.Println("Added some ", i)
+				for k := 2; k < num_elevs+2; k++ {
+					cost_matrix[k][i] += number_of_occuring_up_values * 6
+					fmt.Println("Added some ", i)
+				}
+				number_of_occuring_up_values += 1
+			}
+		}
+	}
+	return cost_matrix
+}
+
+func add_multiple_orders_penalty(cost_matrix [][]int, num_elevs int,
+	num_orders int, best_id int, order_taken int) [][]int {
 	for j := 0; j < num_orders; j++ {
+		fmt.Println(best_id, j)
 		cost_matrix[best_id][j] += 100
 	}
 	for i := 0; i < num_elevs; i++ {
@@ -202,17 +251,18 @@ func add_multiple_orders_penalty(cost_matrix [10][14]int, num_elevs int,
 	return cost_matrix
 }
 
-func smallest_total_cost(id int, cost_matrix [10][14]int, num_elevs int,
+func smallest_total_cost(id int, cost_matrix [][]int, num_elevs int,
 	num_orders int) *Order {
 	for k := 0; k < num_elevs; k++ {
-		smallest_cost := 100
+		smallest_cost := 200
 		best_id := -1
 		order_taken := -1
 		for k := 0; k < num_orders; k++ {
-			smallest_cost = 100
+			smallest_cost = 200
 			for i := 2; i < num_elevs+2; i++ {
 				for j := 0; j < num_orders; j++ {
 					if cost_matrix[i][j] < smallest_cost {
+						fmt.Println("lakjslksjdfl")
 						smallest_cost = cost_matrix[i][j]
 						best_id = i
 						if j > num_orders-num_elevs {
@@ -225,10 +275,11 @@ func smallest_total_cost(id int, cost_matrix [10][14]int, num_elevs int,
 				}
 			}
 		}
+		fmt.Println("Best id: ", best_id)
 		//fmt.Println("Elevator ", best_id-2, " takes the order to floor ",
 		//	cost_matrix[0][order_taken], ", in direction ",
 		//	cost_matrix[1][order_taken],", cost: ", smallest_cost)
-		//print_matrix(cost_matrix, num_elevs, num_orders)
+		print_matrix(cost_matrix, num_elevs, num_orders)
 		//fmt.Println("Order taken", order_taken)
 		if id == best_id-2 {
 			if order_taken >= num_orders-num_elevs {
@@ -244,6 +295,7 @@ func smallest_total_cost(id int, cost_matrix [10][14]int, num_elevs int,
 					Floor:       cost_matrix[0][order_taken],
 					Completed:   false,
 				}
+				fmt.Println("OrderCost: ", smallest_cost)
 				return o
 			}
 		}

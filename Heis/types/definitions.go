@@ -5,7 +5,7 @@ const (
 	UDP_PORT = 20011
 	TCP_PORT = 30011
 
-	SEND_INTERVAL       = 250 // milliseconds
+	SEND_INTERVAL       = 100 // milliseconds
 	BUFFER_MSG_RECIEVED = 20
 )
 
