@@ -34,7 +34,6 @@ func costFunction(network_msg *NetworkMessage) *Order {
 	j := 0
 	//taken_order_number :=0
 	for order := range network_msg.Orders {
-		i := 2
 		order_button_type := order.ButtonPress
 		order_button_floor := order.Floor
 		order_button_value := 0
@@ -128,13 +127,12 @@ func costFunction(network_msg *NetworkMessage) *Order {
 			}*/
 			cost_id_order[0][j] = order_button_floor
 			cost_id_order[1][j] = order_button_value
-			cost_id_order[i][j] = total_cost
+			cost_id_order[id+2][j] = total_cost
 			if internal_order != -1 {
 				cost_id_order[id+2][j+number_of_orders-number_of_elevs] = -2
 			} else {
 				cost_id_order[id+2][j+number_of_orders-number_of_elevs] = 100
 			}
-			i++
 
 		}
 		j++

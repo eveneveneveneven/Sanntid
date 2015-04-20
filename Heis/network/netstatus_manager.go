@@ -24,10 +24,12 @@ func newNetStatManager(newMsgCh, updateCh chan *types.NetworkMessage,
 		tick:   tickCh,
 	}
 	ns.netstat.Id = 0
+	ns.netstat.Statuses[0] = *types.NewElevStat()
 	return ns
 }
 
 func (ns *netStatManager) run() {
+	fmt.Println("Start NetStatManager!")
 	for {
 		select {
 		case newMsg := <-ns.newMsg:
@@ -70,6 +72,7 @@ func (ns *netStatManager) addOrder(id int, order *types.Order) {
 }
 
 func (ns *netStatManager) deleteOrder(id int, order *types.Order) {
+
 	if order.ButtonPress == types.BUTTON_INTERNAL {
 		internal := ns.netstat.Statuses[id].InternalOrders
 		internal = append(internal[1:], -1)
@@ -83,7 +86,7 @@ func (ns *netStatManager) deleteOrder(id int, order *types.Order) {
 }
 
 func (ns *netStatManager) sendUpdate() {
-	fmt.Println("netstat ::", ns.netstat)
+	fmt.Println("netstat  ::", ns.netstat)
 	nm := types.NewNetworkMessage()
 	types.Clone(nm, ns.netstat)
 	ns.update <- nm

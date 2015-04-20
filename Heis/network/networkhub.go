@@ -115,7 +115,7 @@ slaveloop:
 
 func (nh *NetworkHub) parseMessage(msg *types.NetworkMessage) {
 	nh.id = msg.Id
-	nh.msgSendGlobal <- nh.networkStatus
 	nh.networkStatus = msg
+	nh.msgSendGlobal <- nh.networkStatus
 	nh.msgSendLocal <- msg
 }

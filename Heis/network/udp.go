@@ -30,7 +30,7 @@ func startUDPListener(foundMaster chan string, masterMissing chan bool) {
 	}
 	ln, err := net.ListenUDP("udp", laddr)
 	if err != nil {
-		fmt.Println("\t\x1b[31;1mError\x1b[0m |startUDPListener| [%v], exiting program\n")
+		fmt.Printf("\t\x1b[31;1mError\x1b[0m |startUDPListener| [%v], exiting program\n", err)
 		os.Exit(1)
 	}
 	defer ln.Close()

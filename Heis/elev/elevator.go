@@ -67,7 +67,6 @@ func (el *Elevator) run() {
 			el.obj.Completed = true
 			el.objComplete <- el.obj
 			el.obj = nil
-			fmt.Println("Objective complete!")
 		case newDir := <-el.dirLn:
 			el.state.Dir = newDir
 			el.newElevstat <- el.state
