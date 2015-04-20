@@ -56,11 +56,14 @@ func (el *Elevator) run() {
 	for {
 		select {
 		case obj := <-el.newObj:
+			fmt.Println("elev new obj")
 			if el.obj != nil {
+				fmt.Println("elev quitting curr obj")
 				objQuit <- true
 			}
 			objQuit = make(chan bool)
 			el.obj = obj
+			fmt.Println("elev goto obj")
 			go el.goToObjective(objQuit)
 		case <-el.objDone:
 			el.openDoors()

@@ -95,7 +95,9 @@ func (eh *ElevatorHub) parseObjComplete(obj *types.Order) {
 			newObj.Completed = true
 			eh.newOrders[newObj] = struct{}{}
 			eh.removeOrder(eh.currNetwork, newObj)
+			fmt.Println("newobj   ::", newObj)
 		} else {
+			fmt.Println("it breaked!")
 			break
 		}
 	}

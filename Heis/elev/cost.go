@@ -81,7 +81,7 @@ func costFunction(network_msg *NetworkMessage) *Order {
 			}
 
 			if dir_order == dir_elev || dir_elev == STOP {
-				dir_cost = 0
+				dir_cost = 2
 			} else {
 				dir_cost += 5
 			}
@@ -103,12 +103,10 @@ func costFunction(network_msg *NetworkMessage) *Order {
 				}
 			}
 			if internal_order == -1 {
-				if dir_elev == STOP {
-					order_dir_cost = 0
-				} else if dir_elev != STOP && order_button_floor == floor_elev {
+				if floor_elev == order_button_floor {
 					order_dir_cost = 7
 				} else {
-					order_dir_cost = 3
+					order_dir_cost = 2
 				}
 			}
 

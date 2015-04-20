@@ -19,9 +19,10 @@ type NetworkHub struct {
 	foundMaster   chan string
 	missingMaster chan bool
 
-	msgRecieve    chan *types.NetworkMessage
-	msgSendGlobal chan *types.NetworkMessage
-	msgSendLocal  chan *types.NetworkMessage
+	msgRecieveGlobal chan *types.NetworkMessage
+	msgRecieveLocal  chan *types.NetworkMessage
+	msgSendGlobal    chan *types.NetworkMessage
+	msgSendLocal     chan *types.NetworkMessage
 
 	netstatNewMsg chan *types.NetworkMessage
 	netstatUpdate chan *types.NetworkMessage
@@ -29,7 +30,7 @@ type NetworkHub struct {
 }
 
 func NewNetworkHub(becomeMaster chan bool,
-	sendLocalCh, recieveCh chan *types.NetworkMessage) *NetworkHub {
+	sendLocalCh, recieveLocalCh chan *types.NetworkMessage) *NetworkHub {
 	nh := &NetworkHub{
 		id: -1,
 
@@ -41,15 +42,16 @@ func NewNetworkHub(becomeMaster chan bool,
 		foundMaster:   make(chan string),
 		missingMaster: make(chan bool),
 
-		msgRecieve:    recieveCh,
-		msgSendGlobal: make(chan *types.NetworkMessage),
-		msgSendLocal:  sendLocalCh,
+		msgRecieveGlobal: make(chan *types.NetworkMessage),
+		msgRecieveLocal:  recieveLocalCh,
+		msgSendGlobal:    make(chan *types.NetworkMessage),
+		msgSendLocal:     sendLocalCh,
 
 		netstatNewMsg: make(chan *types.NetworkMessage),
 		netstatUpdate: make(chan *types.NetworkMessage),
 		netstatTick:   make(chan bool),
 	}
-	nh.cm = newConnManager(nh.msgRecieve, nh.msgSendGlobal)
+	nh.cm = newConnManager(nh.msgRecieveGlobal, nh.msgSendGlobal)
 	go startUDPListener(nh.foundMaster, nh.missingMaster)
 	go nh.cm.run()
 	return nh
@@ -87,8 +89,16 @@ slaveloop:
 				nh.id--
 			}
 			connected = false
-		case msgRecieve := <-nh.msgRecieve:
-			nh.parseMessage(msgRecieve)
+		case msgRecieve := <-nh.msgRecieveGlobal:
+			nh.id = msgRecieve.Id
+			fmt.Println("trying to send 1")
+			nh.msgSendLocal <- msgRecieve
+			fmt.Println("success 1")
+		case msgUpdate := <-nh.msgRecieveLocal:
+			nh.networkStatus = msgUpdate
+			fmt.Println("trying to send 2")
+			nh.msgSendGlobal <- msgUpdate
+			fmt.Println("success 2")
 		}
 	}
 
@@ -101,8 +111,10 @@ slaveloop:
 	// Master loop
 	for {
 		select {
-		case msgRec := <-nh.msgRecieve:
-			nh.netstatNewMsg <- msgRec
+		case msgRecGlobal := <-nh.msgRecieveGlobal:
+			nh.netstatNewMsg <- msgRecGlobal
+		case msgRecLocal := <-nh.msgRecieveLocal:
+			nh.netstatNewMsg <- msgRecLocal
 		case <-tick:
 			nh.netstatTick <- true
 		case newNetstat := <-nh.netstatUpdate:
@@ -111,11 +123,4 @@ slaveloop:
 			nh.msgSendLocal <- newNetstat
 		}
 	}
-}
-
-func (nh *NetworkHub) parseMessage(msg *types.NetworkMessage) {
-	nh.id = msg.Id
-	nh.networkStatus = msg
-	nh.msgSendGlobal <- nh.networkStatus
-	nh.msgSendLocal <- msg
 }
