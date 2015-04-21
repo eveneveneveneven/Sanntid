@@ -76,12 +76,19 @@ func (el *Elevator) run() {
 		case newDir := <-el.dirLn:
 			fmt.Println("elev dirln")
 			el.state.Dir = newDir
-			el.newElevstat <- el.state
+			select {
+			case el.newElevstat <- el.state:
+			case <-el.newElevstat:
+				el.newElevstat <- el.state
+			}
 		case newFloor := <-el.floorLn:
 			fmt.Println("elev floorln")
 			el.state.Floor = newFloor
-			el.newElevstat <- el.state
-
+			select {
+			case el.newElevstat <- el.state:
+			case <-el.newElevstat:
+				el.newElevstat <- el.state
+			}
 		}
 	}
 }

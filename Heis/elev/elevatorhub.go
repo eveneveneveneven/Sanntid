@@ -71,21 +71,30 @@ func (eh *ElevatorHub) Run() {
 			fmt.Println("Proram is quitting")
 			return
 		case obj := <-eh.newObj:
+			fmt.Println("parseNewObj")
 			eh.parseNewObj(obj)
+			fmt.Println("parseNewObj done")
 		case obj := <-eh.objComplete:
+			fmt.Println("parseObjComplete")
 			eh.parseObjComplete(obj)
+			fmt.Println("parseObjComplete done")
 		case netstat := <-eh.msgRecieve:
+			fmt.Println("msgRecieve")
 			eh.parseNewMsg(netstat)
+			fmt.Println("msgRecieve done")
 		case elevstat := <-eh.newElevstat:
+			fmt.Println("newElevstat")
 			eh.parseNewElevstat(elevstat)
+			fmt.Println("newElevstat done")
 		case order := <-eh.buttonPress:
+			fmt.Println("buttonPress done")
 			eh.parseButtonPress(order)
+			fmt.Println("newElevstat done")
 		}
 	}
 }
 
 func (eh *ElevatorHub) parseNewObj(obj *types.Order) {
-	fmt.Println("parseNewObj")
 	eh.currObj = obj
 	select {
 	case eh.sendElevObj <- obj:
@@ -93,52 +102,57 @@ func (eh *ElevatorHub) parseNewObj(obj *types.Order) {
 		fmt.Println("elevator trying to communicate with elevhub")
 		eh.reset <- true
 	}
-	fmt.Println("parseNewObj done")
 }
 
 func (eh *ElevatorHub) parseObjComplete(obj *types.Order) {
-	fmt.Println("parseObjComplete")
 	eh.newOrders[*obj] = true
-	eh.mergeOrder(eh.currNetwork, obj, true)
 	if obj.ButtonPress != types.BUTTON_INTERNAL {
-		obj.ButtonPress = types.BUTTON_INTERNAL
-		eh.mergeOrder(eh.currNetwork, obj, true)
+		delete(eh.currNetwork.Orders, *obj)
 	}
+	obj.ButtonPress = types.BUTTON_INTERNAL
+	eh.mergeOrder(eh.currNetwork, obj, true)
 	iter := 0
 	for iter < 3 {
 		newObj := costFunction(eh.currNetwork)
+		fmt.Println("NEW OBJ ::::", newObj)
 		if newObj != nil && newObj.Floor == obj.Floor {
 			eh.newOrders[*newObj] = true
-			eh.mergeOrder(eh.currNetwork, newObj, true)
+			delete(eh.currNetwork.Orders, *newObj)
 			iter++
 		} else {
 			break
 		}
 	}
-	fmt.Println("parseObjComplete done")
 }
 
 func (eh *ElevatorHub) parseNewMsg(netstat *types.NetworkMessage) {
 	fmt.Println("recieved ::", netstat)
 	setActiveLights(netstat)
-	eh.currNetwork = netstat
+	types.Clone(eh.currNetwork, netstat)
 	response := types.NewNetworkMessage()
 	response = netstat
-	eh.currElevstat.InternalOrders = netstat.Statuses[netstat.Id].InternalOrders
+	internal := netstat.Statuses[netstat.Id].InternalOrders
+	if len(internal) != 0 {
+		eh.currElevstat.InternalOrders = internal
+	}
 	response.Statuses[response.Id] = *eh.currElevstat
 	eh.removeRedundantOrders(response)
-	fmt.Println("currnetw ::", eh.currNetwork)
 	eh.newNetwork <- eh.currNetwork
-	fmt.Println("and      ::")
 	eh.msgSend <- response
 	fmt.Println("response ::", response)
 }
 
 func (eh *ElevatorHub) removeRedundantOrders(response *types.NetworkMessage) {
-	for order := range eh.currNetwork.Orders {
-		response.Orders[order] = false
+	for order, completed := range eh.currNetwork.Orders {
+		if completed {
+			delete(eh.currNetwork.Orders, order)
+		}
+		response.Orders[order] = completed
 	}
 	for newOrder, completed := range eh.newOrders {
+		if completed {
+			delete(eh.currNetwork.Orders, newOrder)
+		}
 		eh.mergeOrder(response, &newOrder, completed)
 		delete(eh.newOrders, newOrder)
 	}

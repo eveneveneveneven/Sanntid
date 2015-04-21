@@ -44,18 +44,12 @@ func (ns *netStatManager) parseNewMsg(msg *types.NetworkMessage) {
 	id := msg.Id
 	ns.netstat.Statuses[id] = msg.Statuses[id]
 	for order, completed := range msg.Orders {
-		ns.addOrder(&order, completed)
+		if completed {
+			ns.netstat.Orders[order] = true
+		} else if _, ok := ns.netstat.Orders[order]; !ok {
+			ns.netstat.Orders[order] = false
+		}
 	}
-}
-
-func (ns *netStatManager) addOrder(order *types.Order, active bool) {
-	ns.netstat.Orders[*order] = active
-
-}
-
-func (ns *netStatManager) deleteOrder(order *types.Order) {
-	delete(ns.netstat.Orders, *order)
-
 }
 
 func (ns *netStatManager) sendUpdate() {
@@ -65,7 +59,7 @@ func (ns *netStatManager) sendUpdate() {
 	ns.update <- nm
 	for order, completed := range ns.netstat.Orders {
 		if completed {
-			ns.deleteOrder(&order)
+			delete(ns.netstat.Orders, order)
 		}
 	}
 	for id := range ns.netstat.Statuses {

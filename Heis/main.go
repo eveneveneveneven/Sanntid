@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
+	//"os/exec"
 	"os/signal"
 	"runtime"
 	"syscall"
@@ -16,7 +16,7 @@ import (
 )
 
 var child = flag.Bool("c", false, "decides if the program is a child")
-var noBackup = flag.Bool("nb", true, "start the program without backup")
+var noBackup = flag.Bool("nb", false, "start the program without backup")
 
 func cleanupFunc(cleanup, createBackup chan bool) {
 	<-createBackup
@@ -27,11 +27,12 @@ func cleanupFunc(cleanup, createBackup chan bool) {
 		syscall.SIGTERM,
 		os.Interrupt)
 
-	cmd := exec.Command("gnome-terminal", "-e", "./main -c")
-	cmd.Output()
+	//cmd := exec.Command("gnome-terminal", "-e", "./main -c")
+	//cmd.Output()
 
 	go func() {
-		<-sigc
+		s := <-sigc
+		fmt.Println("\n", s)
 		cleanup <- true
 		time.Sleep(100 * time.Millisecond)
 		os.Exit(0)

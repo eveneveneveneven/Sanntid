@@ -220,16 +220,16 @@ func check_for_similar_buttons(cost_matrix [][]int,
 			//fmt.Println(cost_matrix[1][num_orders-num_elevs-i-1], dirs[j])
 			if cost_matrix[1][num_orders-num_elevs-i-1] == 1 && dirs[j] != 1 {
 				for k := 2; k < num_elevs+2; k++ {
-					//fmt.Println("sub'ed some ", num_orders-num_elevs-i-1)
-					cost_matrix[k][num_orders-num_elevs-i-1] += number_of_occuring_down_values * 6
+					fmt.Println("sub'ed some ", num_orders-num_elevs-i-1)
+					cost_matrix[k][num_orders-num_elevs-i-1] += number_of_occuring_down_values * 4
 				}
 				number_of_occuring_down_values += 1
 			}
 			if cost_matrix[1][i] == 0 && dirs[j] != 0 {
 				//fmt.Println("Added some ", i)
 				for k := 2; k < num_elevs+2; k++ {
-					cost_matrix[k][i] += number_of_occuring_up_values * 6
-					//fmt.Println("Added some ", i)
+					cost_matrix[k][i] += number_of_occuring_up_values * 4
+					fmt.Println("Added some ", i)
 				}
 				number_of_occuring_up_values += 1
 			}
@@ -270,6 +270,7 @@ func smallest_total_cost(id int, cost_matrix [][]int, num_elevs int,
 				for j := 0; j < num_orders; j++ {
 					if cost_matrix[i][j] < smallest_cost {
 						smallest_cost = cost_matrix[i][j]
+						//fmt.Println("smallest cost is now", smallest_cost)
 						best_id = i
 						order_taken = j
 
@@ -277,6 +278,7 @@ func smallest_total_cost(id int, cost_matrix [][]int, num_elevs int,
 				}
 			}
 		}
+
 		if smallest_cost < 50 {
 			if id == best_id-2 {
 				if order_taken >= num_orders-num_elevs {
@@ -285,6 +287,7 @@ func smallest_total_cost(id int, cost_matrix [][]int, num_elevs int,
 						Floor:       cost_matrix[0][order_taken],
 					}
 					fmt.Println("Sending order to id:", id, ", Order: ", cost_matrix[0][order_taken], BUTTON_INTERNAL)
+					print_matrix(cost_matrix, num_elevs, num_orders)
 					return o
 				} else {
 					o := &Order{
@@ -292,6 +295,7 @@ func smallest_total_cost(id int, cost_matrix [][]int, num_elevs int,
 						Floor:       cost_matrix[0][order_taken],
 					}
 					fmt.Println("Sending order to id:", id, ", Order: ", cost_matrix[0][order_taken], cost_matrix[1][order_taken])
+					print_matrix(cost_matrix, num_elevs, num_orders)
 					return o
 				}
 			}
@@ -303,7 +307,7 @@ func smallest_total_cost(id int, cost_matrix [][]int, num_elevs int,
 		//fmt.Println("Elevator ", best_id-2, " takes the order to floor ",
 		//	cost_matrix[0][order_taken], ", in direction ",
 		//	cost_matrix[1][order_taken],", cost: ", smallest_cost)
-		print_matrix(cost_matrix, num_elevs, num_orders)
+		//print_matrix(cost_matrix, num_elevs, num_orders)
 		//fmt.Println("Order taken", order_taken)
 		cost_matrix = add_multiple_orders_penalty(cost_matrix, num_elevs, num_orders, best_id, order_taken)
 	}

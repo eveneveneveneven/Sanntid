@@ -95,7 +95,7 @@ slaveloop:
 			connected = false
 		case msgRecieve := <-nh.msgRecieveGlobal:
 			nh.id = msgRecieve.Id
-			fmt.Println("trying to send 1")
+			fmt.Println("trying to send 1 ::", msgRecieve)
 			nh.msgSendLocal <- msgRecieve
 			fmt.Println("success 1")
 		case msgUpdate := <-nh.msgRecieveLocal:

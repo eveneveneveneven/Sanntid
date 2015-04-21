@@ -7,7 +7,7 @@ const (
 
 	BACKUP_PORT = 40011
 
-	SEND_INTERVAL       = 100 // milliseconds
+	SEND_INTERVAL       = 200 // milliseconds
 	BUFFER_MSG_RECIEVED = 20
 )
 
