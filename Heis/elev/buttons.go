@@ -26,7 +26,6 @@ func buttonListener(orderLn chan<- *types.Order) {
 						order := &types.Order{
 							ButtonPress: b,
 							Floor:       f,
-							Completed:   false,
 						}
 						orderLn <- order
 					}

@@ -58,6 +58,7 @@ func (el *Elevator) run() {
 	for {
 		select {
 		case obj := <-el.newObj:
+			fmt.Println("elev newobj")
 			if el.obj != nil {
 				close(el.stop)
 				el.stop = make(chan bool)
@@ -65,17 +66,19 @@ func (el *Elevator) run() {
 			el.obj = obj
 			go el.goToObjective(el.stop)
 		case <-el.objDone:
+			fmt.Println("elev objdone")
+			el.objComplete <- el.obj
 			close(el.stop)
 			el.stop = make(chan bool)
 			go el.goDirection(types.STOP)
 			el.openDoors()
-			el.obj.Completed = true
-			el.objComplete <- el.obj
 			el.obj = nil
 		case newDir := <-el.dirLn:
+			fmt.Println("elev dirln")
 			el.state.Dir = newDir
 			el.newElevstat <- el.state
 		case newFloor := <-el.floorLn:
+			fmt.Println("elev floorln")
 			el.state.Floor = newFloor
 			el.newElevstat <- el.state
 

@@ -16,9 +16,11 @@ import (
 )
 
 var child = flag.Bool("c", false, "decides if the program is a child")
-var noBackup = flag.Bool("nb", false, "start the program without backup")
+var noBackup = flag.Bool("nb", true, "start the program without backup")
 
-func cleanupFunc(cleanup chan bool) {
+func cleanupFunc(cleanup, createBackup chan bool) {
+	<-createBackup
+	fmt.Println("Starting backup process")
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc,
 		syscall.SIGINT,
@@ -36,9 +38,8 @@ func cleanupFunc(cleanup chan bool) {
 	}()
 }
 
-func backupProcess() {
-	fmt.Println("Starting Backup Process")
-	startBackup := make(chan bool)
+func backupProcess(startBackup chan bool) {
+	fmt.Println("Starting Backup listener")
 	go network.StartBackupListener(startBackup)
 	<-startBackup
 }
@@ -47,13 +48,15 @@ func main() {
 	flag.Parse()
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	cleanup := make(chan bool)
+	cleanUp := make(chan bool)
+	startBackup := make(chan bool)
+	createBackup := make(chan bool)
+
 	if !*noBackup {
 		if *child {
-			backupProcess()
-		} else {
-			go cleanupFunc(cleanup)
+			backupProcess(startBackup)
 		}
+		go cleanupFunc(cleanUp, createBackup)
 	}
 	fmt.Println("Start program!")
 
@@ -61,8 +64,9 @@ func main() {
 	elevToNethubCh := make(chan *types.NetworkMessage)
 
 	// Init of modules
-	elevatorHub := elev.NewElevatorHub(cleanup, elevToNethubCh, nethubToElevCh)
-	networkHub := network.NewNetworkHub(nethubToElevCh, elevToNethubCh)
+	elevatorHub := elev.NewElevatorHub(cleanUp, elevToNethubCh, nethubToElevCh)
+	networkHub := network.NewNetworkHub(*noBackup, startBackup, createBackup,
+		nethubToElevCh, elevToNethubCh)
 
 	go elevatorHub.Run()
 	go networkHub.Run()

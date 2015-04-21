@@ -21,33 +21,39 @@ func clearAllLights() {
 }
 
 func setActiveLights(netstat *types.NetworkMessage) {
-	clearAllLights()
-	for _, etg := range netstat.Statuses[netstat.Id].InternalOrders {
-		if etg == -1 {
-			break
+	for order, completed := range netstat.Orders {
+		if completed {
+			delete(netstat.Orders, order)
 		}
-		setOrderLight(&types.Order{
-			ButtonPress: types.BUTTON_INTERNAL,
-			Floor:       etg,
-			Completed:   false,
-		})
+		setOrderLight(&order, completed)
 	}
-	for order := range netstat.Orders {
-		setOrderLight(&order)
+	etgs := []bool{true, true, true, true}
+	for _, etg := range netstat.Statuses[netstat.Id].InternalOrders {
+		if etg != -1 {
+			setOrderLight(&types.Order{types.BUTTON_INTERNAL, etg}, false)
+			etgs[etg] = false
+		}
+	}
+	for etg, v := range etgs {
+		if v {
+			setOrderLight(&types.Order{types.BUTTON_INTERNAL, etg}, true)
+		}
 	}
 }
 
-func setOrderLight(order *types.Order) {
-	if (order.ButtonPress >= 0 && order.ButtonPress <= 2) &&
-		(order.Floor >= 0 && order.Floor <= 3) {
-		if order.Completed {
-			driver.Heis_set_button_lamp(order.ButtonPress, order.Floor, 0)
+func setOrderLight(order *types.Order, completed bool) {
+	f := order.Floor
+	b := order.ButtonPress
+	if (b >= 0 && b <= 2) && (f >= 0 && f <= 3) &&
+		!((f == 0 && b == 1) || (f == 3 && b == 0)) {
+
+		if completed {
+			driver.Heis_set_button_lamp(b, f, 0)
 		} else {
-			driver.Heis_set_button_lamp(order.ButtonPress, order.Floor, 1)
+			driver.Heis_set_button_lamp(b, f, 1)
 		}
 	} else {
-		fmt.Printf(`\t\x1b[31;1mError\x1b[0m |SetOrderLight| [Order recieved is not valid,
-			 got the following %+v], exit program\n`, order)
+		fmt.Printf("\t\x1b[31;1mError\x1b[0m |SetOrderLight| [Order recieved is not valid, got the following %+v], exit program\n", order)
 	}
 }
 

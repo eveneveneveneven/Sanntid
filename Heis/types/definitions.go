@@ -27,7 +27,6 @@ const (
 type Order struct {
 	ButtonPress int
 	Floor       int
-	Completed   bool
 }
 
 type ElevStat struct {
@@ -39,5 +38,5 @@ type ElevStat struct {
 type NetworkMessage struct {
 	Id       int
 	Statuses map[int]ElevStat
-	Orders   map[Order]struct{}
+	Orders   map[Order]bool
 }

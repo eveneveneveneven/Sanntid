@@ -9,6 +9,10 @@ import (
 )
 
 type NetworkHub struct {
+	noBackup     bool
+	startBackup  chan bool
+	createBackup chan bool
+
 	id int
 
 	networkStatus *types.NetworkMessage
@@ -27,8 +31,13 @@ type NetworkHub struct {
 	netstatTick   chan bool
 }
 
-func NewNetworkHub(sendLocalCh, recieveLocalCh chan *types.NetworkMessage) *NetworkHub {
+func NewNetworkHub(noBackup bool, startBackupCh, createBackupCh chan bool,
+	sendLocalCh, recieveLocalCh chan *types.NetworkMessage) *NetworkHub {
 	nh := &NetworkHub{
+		noBackup:     noBackup,
+		startBackup:  startBackupCh,
+		createBackup: createBackupCh,
+
 		id: -1,
 
 		networkStatus: types.NewNetworkMessage(),
@@ -97,7 +106,10 @@ slaveloop:
 		}
 	}
 
-	go StartBackupBroadcast()
+	if !nh.noBackup {
+		go StartBackupBroadcast()
+		nh.createBackup <- true
+	}
 	go startUDPBroadcast()
 	go newNetStatManager(nh.netstatNewMsg, nh.netstatUpdate, nh.netstatTick).run()
 

@@ -6,9 +6,9 @@ func Clone(dst, src *NetworkMessage) {
 	for id, elev := range src.Statuses {
 		dst.Statuses[id] = elev
 	}
-	dst.Orders = make(map[Order]struct{})
-	for order := range src.Orders {
-		dst.Orders[order] = struct{}{}
+	dst.Orders = make(map[Order]bool)
+	for order, active := range src.Orders {
+		dst.Orders[order] = active
 	}
 }
 
@@ -24,6 +24,6 @@ func NewNetworkMessage() *NetworkMessage {
 	return &NetworkMessage{
 		Id:       -1,
 		Statuses: make(map[int]ElevStat),
-		Orders:   make(map[Order]struct{}),
+		Orders:   make(map[Order]bool),
 	}
 }

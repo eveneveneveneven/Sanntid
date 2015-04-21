@@ -283,7 +283,6 @@ func smallest_total_cost(id int, cost_matrix [][]int, num_elevs int,
 					o := &Order{
 						ButtonPress: BUTTON_INTERNAL,
 						Floor:       cost_matrix[0][order_taken],
-						Completed:   false,
 					}
 					fmt.Println("Sending order to id:", id, ", Order: ", cost_matrix[0][order_taken], BUTTON_INTERNAL)
 					return o
@@ -291,7 +290,6 @@ func smallest_total_cost(id int, cost_matrix [][]int, num_elevs int,
 					o := &Order{
 						ButtonPress: cost_matrix[1][order_taken],
 						Floor:       cost_matrix[0][order_taken],
-						Completed:   false,
 					}
 					fmt.Println("Sending order to id:", id, ", Order: ", cost_matrix[0][order_taken], cost_matrix[1][order_taken])
 					return o

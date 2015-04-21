@@ -65,12 +65,10 @@ func startUDPBroadcast() {
 	ip := getLocalAddress()
 	tick := time.Tick(100 * time.Millisecond)
 	for {
-		select {
-		case <-tick:
-			fmt.Fprintf(conn, ip) // trick to send a message on the UDP network!
-			if err != nil {
-				fmt.Printf("\t\x1b[31;1mError\x1b[0m |startUDPBroadcast| [%v]\n", err)
-			}
+		<-tick
+		fmt.Fprintf(conn, ip) // trick to send a message on the UDP network!
+		if err != nil {
+			fmt.Printf("\t\x1b[31;1mError\x1b[0m |startUDPBroadcast| [%v]\n", err)
 		}
 	}
 }
@@ -94,7 +92,7 @@ func StartBackupListener(startBackup chan bool) {
 		ln.SetReadDeadline(time.Now().Add(700 * time.Millisecond))
 		n, _, err := ln.ReadFromUDP(p)
 		if err != nil || string(p[:n]) != myIp {
-			fmt.Printf("\t\x1b[31;1mError\x1b[0m |startUDPListener| [%v], starting program\n", err)
+			fmt.Printf("\t\x1b[31;1mError\x1b[0m |StartBackupListener| [%v], start program\n", err)
 			startBackup <- true
 			return
 		}
@@ -117,12 +115,10 @@ func StartBackupBroadcast() {
 	ip := getLocalAddress()
 	tick := time.Tick(100 * time.Millisecond)
 	for {
-		select {
-		case <-tick:
-			fmt.Fprintf(conn, ip) // trick to send a message on the UDP network!
-			if err != nil {
-				fmt.Printf("\t\x1b[31;1mError\x1b[0m |StartBackupBroadcast| [%v]\n", err)
-			}
+		<-tick
+		fmt.Fprintf(conn, ip) // trick to send a message on the UDP network!
+		if err != nil {
+			fmt.Printf("\t\x1b[31;1mError\x1b[0m |StartBackupBroadcast| [%v]\n", err)
 		}
 	}
 }

@@ -7,8 +7,7 @@ import (
 )
 
 type netStatManager struct {
-	netstat    *types.NetworkMessage
-	doneOrders map[*types.Order]int
+	netstat *types.NetworkMessage
 
 	newMsg chan *types.NetworkMessage
 	update chan *types.NetworkMessage
@@ -18,8 +17,7 @@ type netStatManager struct {
 func newNetStatManager(newMsgCh, updateCh chan *types.NetworkMessage,
 	tickCh chan bool) *netStatManager {
 	ns := &netStatManager{
-		netstat:    types.NewNetworkMessage(),
-		doneOrders: make(map[*types.Order]int),
+		netstat: types.NewNetworkMessage(),
 
 		newMsg: newMsgCh,
 		update: updateCh,
@@ -45,56 +43,31 @@ func (ns *netStatManager) run() {
 func (ns *netStatManager) parseNewMsg(msg *types.NetworkMessage) {
 	id := msg.Id
 	ns.netstat.Statuses[id] = msg.Statuses[id]
-	for order := range msg.Orders {
-		if order.Completed {
-			ns.doneOrders[&order] = id
-		} else {
-			ns.addOrder(id, &order)
-		}
+	for order, completed := range msg.Orders {
+		ns.addOrder(&order, completed)
 	}
 }
 
-func (ns *netStatManager) addOrder(id int, order *types.Order) {
-	if order.ButtonPress == types.BUTTON_INTERNAL {
-		newEtg := order.Floor
-		internal := ns.netstat.Statuses[id].InternalOrders
-		for i, etg := range internal {
-			if newEtg == etg {
-				break
-			} else if etg == -1 {
-				internal[i] = newEtg
-				return
-			}
-		}
-	} else {
-		if _, ok := ns.netstat.Orders[*order]; !ok {
-			ns.netstat.Orders[*order] = struct{}{}
-		}
-	}
+func (ns *netStatManager) addOrder(order *types.Order, active bool) {
+	ns.netstat.Orders[*order] = active
+
 }
 
-func (ns *netStatManager) deleteOrder(id int, order *types.Order) {
-	if order.ButtonPress == types.BUTTON_INTERNAL {
-		internal := ns.netstat.Statuses[id].InternalOrders
-		internal = append(internal[1:], -1)
-		elevstat := ns.netstat.Statuses[id]
-		elevstat.InternalOrders = internal
-		ns.netstat.Statuses[id] = elevstat
-	} else {
-		order.Completed = false
-		delete(ns.netstat.Orders, *order)
-	}
+func (ns *netStatManager) deleteOrder(order *types.Order) {
+	delete(ns.netstat.Orders, *order)
+
 }
 
 func (ns *netStatManager) sendUpdate() {
-	for order, id := range ns.doneOrders {
-		ns.deleteOrder(id, order)
-		delete(ns.doneOrders, order)
-	}
 	fmt.Println("netstat  ::", ns.netstat)
 	nm := types.NewNetworkMessage()
 	types.Clone(nm, ns.netstat)
 	ns.update <- nm
+	for order, completed := range ns.netstat.Orders {
+		if completed {
+			ns.deleteOrder(&order)
+		}
+	}
 	for id := range ns.netstat.Statuses {
 		if id != 0 {
 			delete(ns.netstat.Statuses, id)

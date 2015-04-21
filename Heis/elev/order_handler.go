@@ -42,7 +42,6 @@ func (oh *orderHandler) run() {
 }
 
 func (oh *orderHandler) parseNewNetwork(netstat *types.NetworkMessage) {
-	setActiveLights(netstat)
 	oh.currObj = costFunction(netstat)
 	if oh.currObj == nil {
 		oh.lastObj = nil
