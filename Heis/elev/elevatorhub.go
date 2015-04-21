@@ -66,20 +66,9 @@ func (eh *ElevatorHub) Run() {
 	fmt.Println("Start ElevatorHub!")
 	for {
 		select {
-		case _, ok := <-eh.cleanup:
-			if !ok {
-				fmt.Println("Shutting down elevator")
-				return
-			}
-		default:
-		}
-
-		select {
-		case _, ok := <-eh.cleanup:
-			if !ok {
-				fmt.Println("Shutting down elevator")
-				return
-			}
+		case <-eh.cleanup:
+			eh.elev.goDirection(types.STOP)
+			return
 		case obj := <-eh.newObj:
 			eh.parseNewObj(obj)
 		case obj := <-eh.objComplete:
@@ -216,6 +205,4 @@ func (eh *ElevatorHub) parseButtonPress(order *types.Order) {
 
 func CleanExit() {
 	newElevator(nil, nil, nil)
-	setDoorLight(1)
-	setStopLight(1)
 }

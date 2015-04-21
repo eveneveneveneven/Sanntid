@@ -97,6 +97,7 @@ slaveloop:
 		}
 	}
 
+	go StartBackupBroadcast()
 	go startUDPBroadcast()
 	go newNetStatManager(nh.netstatNewMsg, nh.netstatUpdate, nh.netstatTick).run()
 

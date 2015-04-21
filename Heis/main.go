@@ -1,43 +1,60 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"runtime"
+	"syscall"
+	"time"
 
 	"./elev"
 	"./network"
 	"./types"
 )
 
+var child = flag.Bool("c", false, "decides if the program is a child")
+var noBackup = flag.Bool("nb", false, "start the program without backup")
+
 func cleanupFunc(cleanup chan bool) {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Printf("Got a crash with err :: %+v\n", r)
-		}
-		close(cleanup)
-		elev.CleanExit()
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		os.Interrupt)
+
+	cmd := exec.Command("gnome-terminal", "-e", "./main -c")
+	cmd.Output()
+
+	go func() {
+		<-sigc
+		cleanup <- true
+		time.Sleep(100 * time.Millisecond)
 		os.Exit(0)
 	}()
-	sigCh := make(chan os.Signal, 1)
-	startCleanup := make(chan bool)
-	signal.Notify(sigCh, os.Interrupt)
-	go func() {
-		for _ = range sigCh {
-			fmt.Println("\nReceived an interrupt, stopping program...\n")
-			startCleanup <- true
-		}
-	}()
-	<-startCleanup
-	panic(nil)
 }
+
+func backupProcess() {
+	fmt.Println("Starting Backup Process")
+	startBackup := make(chan bool)
+	go network.StartBackupListener(startBackup)
+	<-startBackup
+}
+
 func main() {
+	flag.Parse()
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	cleanup := make(chan bool)
-	go cleanupFunc(cleanup)
-
+	if !*noBackup {
+		if *child {
+			backupProcess()
+		} else {
+			go cleanupFunc(cleanup)
+		}
+	}
 	fmt.Println("Start program!")
 
 	nethubToElevCh := make(chan *types.NetworkMessage)

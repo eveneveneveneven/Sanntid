@@ -1,10 +1,11 @@
 package elev
 
 import (
-	"../driver"
-	"../types"
 	"fmt"
 	"time"
+
+	"../driver"
+	"../types"
 )
 
 const (
@@ -85,6 +86,7 @@ func (el *Elevator) run() {
 func (el *Elevator) elevInit() {
 	fmt.Println("Elev init")
 	driver.Heis_set_speed(0)
+	time.Sleep(100 * time.Millisecond)
 	if driver.Heis_get_floor() == -1 {
 		driver.Heis_set_speed(-SPEED)
 		var floor int
