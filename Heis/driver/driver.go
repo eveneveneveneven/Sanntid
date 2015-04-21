@@ -37,3 +37,7 @@ func Heis_set_button_lamp(button int, floor int, value int) {
 func Heis_set_door_open_lamp(value int) {
 	C.elev_set_door_open_lamp(C.int(value))
 }
+
+func Heis_set_stop_light(value int) {
+	C.elev_set_stop_lamp(C.int(value))
+}

@@ -20,6 +20,7 @@ type Elevator struct {
 	dirLn   chan int
 	floorLn chan int
 	objDone chan bool
+	stop    chan bool
 
 	newElevstat chan *types.ElevStat
 
@@ -37,6 +38,7 @@ func newElevator(newElevstatCh chan *types.ElevStat,
 		dirLn:   make(chan int),
 		floorLn: make(chan int),
 		objDone: make(chan bool),
+		stop:    make(chan bool),
 
 		newElevstat: newElevstatCh,
 
@@ -52,27 +54,19 @@ func newElevator(newElevstatCh chan *types.ElevStat,
 
 func (el *Elevator) run() {
 	fmt.Println("Start Elevator!")
-	var objQuit chan bool = nil
 	for {
 		select {
 		case obj := <-el.newObj:
-			fmt.Println("elev new obj")
 			if el.obj != nil {
-				fmt.Println("elev quitting curr obj")
-				select {
-				case objQuit <- true:
-					fmt.Println("quitting confirmed")
-				default:
-					fmt.Println("Hmm. continue?")
-					continue
-				}
-
+				close(el.stop)
+				el.stop = make(chan bool)
 			}
-			objQuit = make(chan bool)
 			el.obj = obj
-			fmt.Println("elev goto obj")
-			go el.goToObjective(objQuit)
+			go el.goToObjective(el.stop)
 		case <-el.objDone:
+			close(el.stop)
+			el.stop = make(chan bool)
+			go el.goDirection(types.STOP)
 			el.openDoors()
 			el.obj.Completed = true
 			el.objComplete <- el.obj
@@ -83,6 +77,7 @@ func (el *Elevator) run() {
 		case newFloor := <-el.floorLn:
 			el.state.Floor = newFloor
 			el.newElevstat <- el.state
+
 		}
 	}
 }
@@ -96,7 +91,6 @@ func (el *Elevator) elevInit() {
 		for {
 			floor = driver.Heis_get_floor()
 			if floor != -1 {
-				fmt.Println("Got a floor : ", floor)
 				break
 			}
 		}
@@ -116,7 +110,7 @@ func (el *Elevator) floorListener() {
 	}
 }
 
-func (el *Elevator) goToObjective(objQuit chan bool) {
+func (el *Elevator) goToObjective(stop chan bool) {
 	dest := el.obj.Floor
 	diff := dest - el.state.Floor
 	if diff > 0 {
@@ -127,21 +121,17 @@ func (el *Elevator) goToObjective(objQuit chan bool) {
 		el.objDone <- true
 		return
 	}
-	stop := make(chan bool)
-	go func(stop chan bool) {
-		for driver.Heis_get_floor() != dest {
+
+	for driver.Heis_get_floor() != dest {
+		select {
+		case _, ok := <-stop:
+			if !ok {
+				return
+			}
+		default:
 		}
-		stop <- true
-	}(stop)
-	select {
-	case <-objQuit:
-		fmt.Println("elev obj quit")
-	case <-stop:
-		fmt.Println("elev stopping")
-		el.goDirection(types.STOP)
-		el.objDone <- true
 	}
-	fmt.Println("elev gotoObj done")
+	el.objDone <- true
 }
 
 func (el *Elevator) goDirection(dir int) {

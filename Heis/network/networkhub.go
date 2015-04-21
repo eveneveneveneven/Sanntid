@@ -11,8 +11,6 @@ import (
 type NetworkHub struct {
 	id int
 
-	becomeMaster chan bool
-
 	networkStatus *types.NetworkMessage
 	cm            *connManager
 
@@ -29,12 +27,9 @@ type NetworkHub struct {
 	netstatTick   chan bool
 }
 
-func NewNetworkHub(becomeMaster chan bool,
-	sendLocalCh, recieveLocalCh chan *types.NetworkMessage) *NetworkHub {
+func NewNetworkHub(sendLocalCh, recieveLocalCh chan *types.NetworkMessage) *NetworkHub {
 	nh := &NetworkHub{
 		id: -1,
-
-		becomeMaster: becomeMaster,
 
 		networkStatus: types.NewNetworkMessage(),
 		cm:            nil,
@@ -101,8 +96,6 @@ slaveloop:
 			fmt.Println("success 2")
 		}
 	}
-
-	close(nh.becomeMaster)
 
 	go startUDPBroadcast()
 	go newNetStatManager(nh.netstatNewMsg, nh.netstatUpdate, nh.netstatTick).run()

@@ -7,7 +7,8 @@ import (
 )
 
 type netStatManager struct {
-	netstat *types.NetworkMessage
+	netstat    *types.NetworkMessage
+	doneOrders map[*types.Order]int
 
 	newMsg chan *types.NetworkMessage
 	update chan *types.NetworkMessage
@@ -17,7 +18,8 @@ type netStatManager struct {
 func newNetStatManager(newMsgCh, updateCh chan *types.NetworkMessage,
 	tickCh chan bool) *netStatManager {
 	ns := &netStatManager{
-		netstat: types.NewNetworkMessage(),
+		netstat:    types.NewNetworkMessage(),
+		doneOrders: make(map[*types.Order]int),
 
 		newMsg: newMsgCh,
 		update: updateCh,
@@ -45,7 +47,7 @@ func (ns *netStatManager) parseNewMsg(msg *types.NetworkMessage) {
 	ns.netstat.Statuses[id] = msg.Statuses[id]
 	for order := range msg.Orders {
 		if order.Completed {
-			ns.deleteOrder(id, &order)
+			ns.doneOrders[&order] = id
 		} else {
 			ns.addOrder(id, &order)
 		}
@@ -72,7 +74,6 @@ func (ns *netStatManager) addOrder(id int, order *types.Order) {
 }
 
 func (ns *netStatManager) deleteOrder(id int, order *types.Order) {
-
 	if order.ButtonPress == types.BUTTON_INTERNAL {
 		internal := ns.netstat.Statuses[id].InternalOrders
 		internal = append(internal[1:], -1)
@@ -86,6 +87,10 @@ func (ns *netStatManager) deleteOrder(id int, order *types.Order) {
 }
 
 func (ns *netStatManager) sendUpdate() {
+	for order, id := range ns.doneOrders {
+		ns.deleteOrder(id, order)
+		delete(ns.doneOrders, order)
+	}
 	fmt.Println("netstat  ::", ns.netstat)
 	nm := types.NewNetworkMessage()
 	types.Clone(nm, ns.netstat)

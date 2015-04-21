@@ -7,51 +7,58 @@ import (
 )
 
 type ElevatorHub struct {
+	cleanup chan bool
+
 	currNetwork  *types.NetworkMessage
 	currElevstat *types.ElevStat
 	currObj      *types.Order
 	newOrders    map[*types.Order]struct{}
-
-	becomeMaster chan bool
 
 	msgSend    chan *types.NetworkMessage
 	msgRecieve chan *types.NetworkMessage
 
 	newNetwork chan *types.NetworkMessage
 	newObj     chan *types.Order
+	reset      chan bool
 
 	newElevstat chan *types.ElevStat
 	sendElevObj chan *types.Order
 	objComplete chan *types.Order
 
 	buttonPress chan *types.Order
+
+	elev *Elevator
 }
 
-func NewElevatorHub(becomeMaster chan bool,
+func NewElevatorHub(cleanupCh chan bool,
 	sendCh, recieveCh chan *types.NetworkMessage) *ElevatorHub {
 	eh := &ElevatorHub{
+		cleanup: cleanupCh,
+
 		currNetwork:  types.NewNetworkMessage(),
 		currElevstat: types.NewElevStat(),
 		currObj:      nil,
 		newOrders:    make(map[*types.Order]struct{}),
-
-		becomeMaster: becomeMaster,
 
 		msgSend:    sendCh,
 		msgRecieve: recieveCh,
 
 		newNetwork: make(chan *types.NetworkMessage),
 		newObj:     make(chan *types.Order),
+		reset:      make(chan bool),
 
 		newElevstat: make(chan *types.ElevStat),
 		sendElevObj: make(chan *types.Order),
 		objComplete: make(chan *types.Order, 1),
 
 		buttonPress: make(chan *types.Order),
+
+		elev: nil,
 	}
-	go newOrderHandler(eh.newNetwork, eh.newObj).run()
+	go newOrderHandler(eh.newNetwork, eh.newObj, eh.reset).run()
 	go buttonListener(eh.buttonPress)
-	go newElevator(eh.newElevstat, eh.sendElevObj, eh.objComplete).run()
+	eh.elev = newElevator(eh.newElevstat, eh.sendElevObj, eh.objComplete)
+	go eh.elev.run()
 	return eh
 }
 
@@ -59,11 +66,23 @@ func (eh *ElevatorHub) Run() {
 	fmt.Println("Start ElevatorHub!")
 	for {
 		select {
+		case _, ok := <-eh.cleanup:
+			if !ok {
+				fmt.Println("Shutting down elevator")
+				return
+			}
+		default:
+		}
+
+		select {
+		case _, ok := <-eh.cleanup:
+			if !ok {
+				fmt.Println("Shutting down elevator")
+				return
+			}
 		case obj := <-eh.newObj:
-			fmt.Println("new objective")
 			eh.parseNewObj(obj)
 		case obj := <-eh.objComplete:
-			fmt.Println("objective complete!")
 			eh.parseObjComplete(obj)
 		case netstat := <-eh.msgRecieve:
 			eh.parseNewMsg(netstat)
@@ -76,12 +95,19 @@ func (eh *ElevatorHub) Run() {
 }
 
 func (eh *ElevatorHub) parseNewObj(obj *types.Order) {
+	fmt.Println("parseNewObj")
 	eh.currObj = obj
-	eh.sendElevObj <- obj
-	fmt.Println("parsenewobj done")
+	select {
+	case eh.sendElevObj <- obj:
+	default:
+		fmt.Println("elevator trying to communicate with elevhub")
+		eh.reset <- true
+	}
+	fmt.Println("parseNewObj done")
 }
 
 func (eh *ElevatorHub) parseObjComplete(obj *types.Order) {
+	fmt.Println("parseObjComplete")
 	eh.newOrders[obj] = struct{}{}
 	eh.removeOrder(eh.currNetwork, obj)
 	internal := &types.Order{
@@ -96,12 +122,11 @@ func (eh *ElevatorHub) parseObjComplete(obj *types.Order) {
 			newObj.Completed = true
 			eh.newOrders[newObj] = struct{}{}
 			eh.removeOrder(eh.currNetwork, newObj)
-			fmt.Println("newobj   ::", newObj)
 		} else {
-			fmt.Println("it breaked!")
 			break
 		}
 	}
+	fmt.Println("parseObjComplete done")
 }
 
 func (eh *ElevatorHub) parseNewMsg(netstat *types.NetworkMessage) {
@@ -178,7 +203,6 @@ func (eh *ElevatorHub) removeOrder(dst *types.NetworkMessage, order *types.Order
 		delete(dst.Orders, *order)
 	}
 	order.Completed = true
-	fmt.Println("done removing ::", dst)
 }
 
 func (eh *ElevatorHub) parseNewElevstat(elevstat *types.ElevStat) {
@@ -188,4 +212,10 @@ func (eh *ElevatorHub) parseNewElevstat(elevstat *types.ElevStat) {
 
 func (eh *ElevatorHub) parseButtonPress(order *types.Order) {
 	eh.newOrders[order] = struct{}{}
+}
+
+func CleanExit() {
+	newElevator(nil, nil, nil)
+	setDoorLight(1)
+	setStopLight(1)
 }

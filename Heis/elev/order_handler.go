@@ -12,24 +12,32 @@ type orderHandler struct {
 
 	newNetwork chan *types.NetworkMessage
 	sendNewObj chan *types.Order
+
+	reset chan bool
 }
 
 func newOrderHandler(newNetworkCh chan *types.NetworkMessage,
-	sendNewObjCh chan *types.Order) *orderHandler {
+	sendNewObjCh chan *types.Order, resetCh chan bool) *orderHandler {
 	return &orderHandler{
 		currObj: nil,
 		lastObj: nil,
 
 		newNetwork: newNetworkCh,
 		sendNewObj: sendNewObjCh,
+
+		reset: resetCh,
 	}
 }
 
 func (oh *orderHandler) run() {
 	fmt.Println("Start OrderHandler!")
 	for {
-		newNetwork := <-oh.newNetwork
-		oh.parseNewNetwork(newNetwork)
+		select {
+		case newNetwork := <-oh.newNetwork:
+			oh.parseNewNetwork(newNetwork)
+		case <-oh.reset:
+			oh.lastObj = nil
+		}
 	}
 }
 

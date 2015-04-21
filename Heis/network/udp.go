@@ -68,7 +68,6 @@ func startUDPBroadcast() {
 		if err != nil {
 			fmt.Printf("\t\x1b[31;1mError\x1b[0m |startUDPBroadcast| [%v]\n", err)
 		}
-
 		time.Sleep(100 * time.Millisecond)
 	}
 }

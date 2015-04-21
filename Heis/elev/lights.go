@@ -16,6 +16,8 @@ func clearAllLights() {
 			driver.Heis_set_button_lamp(b, f, 0)
 		}
 	}
+	driver.Heis_set_stop_light(0)
+	driver.Heis_set_door_open_lamp(0)
 }
 
 func setActiveLights(netstat *types.NetworkMessage) {
@@ -57,4 +59,12 @@ func floorIndicator() {
 			driver.Heis_set_floor_indicator(floor)
 		}
 	}
+}
+
+func setStopLight(value int) {
+	driver.Heis_set_stop_light(1)
+}
+
+func setDoorLight(value int) {
+	driver.Heis_set_door_open_lamp(value)
 }
