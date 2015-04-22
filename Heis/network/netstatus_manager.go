@@ -41,7 +41,11 @@ func (ns *netStatManager) run() {
 }
 
 func (ns *netStatManager) parseNewMsg(msg *types.NetworkMessage) {
-	id := msg.Id
+	var id int
+	for id = range msg.Statuses {
+		break
+	}
+	fmt.Println("netstatNewMsg id ::", id, ":: msg ::", msg)
 	ns.netstat.Statuses[id] = msg.Statuses[id]
 	for order, completed := range msg.Orders {
 		if completed {

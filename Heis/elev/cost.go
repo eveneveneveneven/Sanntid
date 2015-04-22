@@ -86,14 +86,16 @@ func costFunction(network_msg *NetworkMessage) *Order {
 			diff_cost = abs(order_button_floor - floor_elev)
 			if order_button_floor > floor_elev {
 				dir_order = UP
-			} else {
+			} else if order_button_floor < floor_elev {
 				dir_order = DOWN
+			} else {
+				dir_order = STOP
 			}
 
 			if dir_order == dir_elev || dir_elev == STOP {
 				dir_cost = 0
 			} else {
-				dir_cost += 5
+				dir_cost += 10
 			}
 			if internal_order != -1 {
 				if order_button_value == dir_internal_order &&
@@ -112,7 +114,7 @@ func costFunction(network_msg *NetworkMessage) *Order {
 
 					}
 				} else {
-					order_dir_cost = 15
+					order_dir_cost = 18
 				}
 			}
 			if internal_order == -1 {
@@ -220,7 +222,6 @@ func check_for_similar_buttons(cost_matrix [][]int,
 			//fmt.Println(cost_matrix[1][num_orders-num_elevs-i-1], dirs[j])
 			if cost_matrix[1][num_orders-num_elevs-i-1] == 1 && dirs[j] != 1 {
 				for k := 2; k < num_elevs+2; k++ {
-					fmt.Println("sub'ed some ", num_orders-num_elevs-i-1)
 					cost_matrix[k][num_orders-num_elevs-i-1] += number_of_occuring_down_values * 4
 				}
 				number_of_occuring_down_values += 1
@@ -229,7 +230,6 @@ func check_for_similar_buttons(cost_matrix [][]int,
 				//fmt.Println("Added some ", i)
 				for k := 2; k < num_elevs+2; k++ {
 					cost_matrix[k][i] += number_of_occuring_up_values * 4
-					fmt.Println("Added some ", i)
 				}
 				number_of_occuring_up_values += 1
 			}
@@ -286,7 +286,7 @@ func smallest_total_cost(id int, cost_matrix [][]int, num_elevs int,
 						ButtonPress: BUTTON_INTERNAL,
 						Floor:       cost_matrix[0][order_taken],
 					}
-					fmt.Println("Sending order to id:", id, ", Order: ", cost_matrix[0][order_taken], BUTTON_INTERNAL)
+					fmt.Println("Sending internal order to id:", id, ", Order: ", cost_matrix[0][order_taken], BUTTON_INTERNAL)
 					print_matrix(cost_matrix, num_elevs, num_orders)
 					return o
 				} else {

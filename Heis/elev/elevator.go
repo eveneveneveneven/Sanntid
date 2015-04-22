@@ -11,7 +11,7 @@ import (
 const (
 	SPEED         = 150
 	BUFFER_ORDERS = 10
-	DOOR_TIMER    = 150 // milliseconds
+	DOOR_TIMER    = 3000 // milliseconds
 )
 
 type Elevator struct {
@@ -25,12 +25,12 @@ type Elevator struct {
 
 	newElevstat chan *types.ElevStat
 
-	newObj      chan *types.Order
-	objComplete chan *types.Order
+	newObj      chan types.Order
+	objComplete chan types.Order
 }
 
 func newElevator(newElevstatCh chan *types.ElevStat,
-	newObjCh, objCompleteCh chan *types.Order) *Elevator {
+	newObjCh, objCompleteCh chan types.Order) *Elevator {
 	driver.Heis_init()
 	el := &Elevator{
 		state: types.NewElevStat(),
@@ -63,15 +63,16 @@ func (el *Elevator) run() {
 				close(el.stop)
 				el.stop = make(chan bool)
 			}
-			el.obj = obj
+			el.obj = &obj
 			go el.goToObjective(el.stop)
 		case <-el.objDone:
 			fmt.Println("elev objdone")
-			el.objComplete <- el.obj
+			el.objComplete <- *el.obj
 			close(el.stop)
 			el.stop = make(chan bool)
 			go el.goDirection(types.STOP)
 			el.openDoors()
+			fmt.Println("elev close doors")
 			el.obj = nil
 		case newDir := <-el.dirLn:
 			fmt.Println("elev dirln")
@@ -80,6 +81,7 @@ func (el *Elevator) run() {
 			case el.newElevstat <- el.state:
 			case <-el.newElevstat:
 				el.newElevstat <- el.state
+				fmt.Println("flushing elev dirln")
 			}
 		case newFloor := <-el.floorLn:
 			fmt.Println("elev floorln")
@@ -88,6 +90,7 @@ func (el *Elevator) run() {
 			case el.newElevstat <- el.state:
 			case <-el.newElevstat:
 				el.newElevstat <- el.state
+				fmt.Println("flushing elev floorln")
 			}
 		}
 	}

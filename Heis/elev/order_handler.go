@@ -11,13 +11,13 @@ type orderHandler struct {
 	lastObj *types.Order
 
 	newNetwork chan *types.NetworkMessage
-	sendNewObj chan *types.Order
+	sendNewObj chan types.Order
 
 	reset chan bool
 }
 
 func newOrderHandler(newNetworkCh chan *types.NetworkMessage,
-	sendNewObjCh chan *types.Order, resetCh chan bool) *orderHandler {
+	sendNewObjCh chan types.Order, resetCh chan bool) *orderHandler {
 	return &orderHandler{
 		currObj: nil,
 		lastObj: nil,
@@ -50,7 +50,7 @@ func (oh *orderHandler) parseNewNetwork(netstat *types.NetworkMessage) {
 	fmt.Printf("@@@> CurrObj : %v\n@@@> LastObj : %v\n", oh.currObj, oh.lastObj)
 	if oh.lastObj == nil || *oh.currObj != *oh.lastObj {
 		fmt.Println("new obj ::", oh.currObj)
-		oh.sendNewObj <- oh.currObj
+		oh.sendNewObj <- *oh.currObj
 		oh.lastObj = oh.currObj
 	}
 }

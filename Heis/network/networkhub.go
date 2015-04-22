@@ -100,7 +100,7 @@ slaveloop:
 			fmt.Println("success 1")
 		case msgUpdate := <-nh.msgRecieveLocal:
 			nh.networkStatus = msgUpdate
-			fmt.Println("trying to send 2")
+			fmt.Println("trying to send 2 ::", msgUpdate)
 			nh.msgSendGlobal <- msgUpdate
 			fmt.Println("success 2")
 		}

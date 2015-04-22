@@ -5,7 +5,7 @@ import (
 	"../types"
 )
 
-func buttonListener(orderLn chan<- *types.Order) {
+func buttonListener(orderLn chan types.Order) {
 	pressed := make([][]bool, 4)
 	for i := 0; i < 4; i++ {
 		pressed[i] = make([]bool, 3)
@@ -23,7 +23,7 @@ func buttonListener(orderLn chan<- *types.Order) {
 				if driver.Heis_get_button(b, f) {
 					if !pressed[f][b] {
 						pressed[f][b] = true
-						order := &types.Order{
+						order := types.Order{
 							ButtonPress: b,
 							Floor:       f,
 						}
