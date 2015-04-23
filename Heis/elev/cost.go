@@ -33,8 +33,12 @@ func costFunction(network_msg *NetworkMessage) *Order {
 	//fmt.Println("numelev ::", number_of_elevs)
 	//fmt.Println("numorder ::", number_of_orders)
 	cost_id_order := make([][]int, number_of_elevs+2)
+	internal_orders := make([][]int, number_of_elevs)
 	for i := 0; i < number_of_elevs+2; i++ {
 		cost_id_order[i] = make([]int, number_of_orders)
+	}
+	for i := 0; i < number_of_elevs; i++ {
+		internal_orders[i] = make([]int, 5)
 	}
 
 	dirs := make([]int, number_of_elevs)
@@ -61,18 +65,16 @@ func costFunction(network_msg *NetworkMessage) *Order {
 			diff_cost := 0
 			dir_cost := 0
 			order_dir_cost := 0
-			//internal_orders_cost :=0
-			//fmt.Println(elevStat.InternalOrders)
 			internal_order := elevStat.InternalOrders[0]
-			/*for n := range elevStat.InternalOrders{
-				if elevStat.InternalOrders[n] != -1{
-					internal_orders_cost+=5
-				}
-			}*/
-			//multiple_orders_cost :=0
+
+			for i := 1; i < 5; i++ {
+				internal_orders[id][i] = elevStat.InternalOrders[i-1]
+			}
+
 			dir_order := 0
 			dir_elev := elevStat.Dir
 			floor_elev := elevStat.Floor
+			internal_orders[id][0] = floor_elev
 			dirs[id] = dir_elev
 			dir_internal_order := -1
 			if internal_order-floor_elev < 0 && internal_order != -1 {
@@ -161,7 +163,7 @@ func costFunction(network_msg *NetworkMessage) *Order {
 	cost_id_order[1][j] = BUTTON_INTERNAL
 	//print_matrix(cost_id_order, number_of_elevs, number_of_orders)
 	return sort_according_to_ordered_values(network_msg.Id, cost_id_order,
-		number_of_elevs, number_of_orders, dirs)
+		number_of_elevs, number_of_orders, dirs, internal_orders)
 
 }
 func print_matrix(cost_matrix [][]int, num_elevs int, num_orders int) {
@@ -188,7 +190,7 @@ func switch_rows(cost_matrix [][]int, switching_floor int,
 }
 
 func sort_according_to_ordered_values(id int, cost_matrix [][]int,
-	num_elevs int, num_orders int, dirs []int) *Order {
+	num_elevs int, num_orders int, dirs []int, internal_orders [][]int) *Order {
 	lowest_order := 10
 	for i := 0; i < num_orders-num_elevs; i++ {
 		lowest_floor := 10
@@ -210,7 +212,7 @@ func sort_according_to_ordered_values(id int, cost_matrix [][]int,
 	//fmt.Println("\n")
 	//print_matrix(cost_matrix, num_elevs, num_orders)
 	cost_matrix = check_for_similar_buttons(cost_matrix, num_elevs, num_orders, dirs)
-	return smallest_total_cost(id, cost_matrix, num_elevs, num_orders)
+	return smallest_total_cost(id, cost_matrix, num_elevs, num_orders, internal_orders)
 }
 
 func check_for_similar_buttons(cost_matrix [][]int,
@@ -252,7 +254,7 @@ func add_multiple_orders_penalty(cost_matrix [][]int, num_elevs int,
 }
 
 func smallest_total_cost(id int, cost_matrix [][]int, num_elevs int,
-	num_orders int) *Order {
+	num_orders int, internal_orders [][]int) *Order {
 	num_active_orders := 0
 	for i := 0; i < num_elevs; i++ {
 		if cost_matrix[0][num_orders-num_elevs+i] != -1 {
@@ -282,11 +284,32 @@ func smallest_total_cost(id int, cost_matrix [][]int, num_elevs int,
 		if smallest_cost < 50 {
 			if id == best_id-2 {
 				if order_taken >= num_orders-num_elevs {
+					goal_floor := internal_orders[id][1]
+					elev_floor := internal_orders[id][0]
+					fmt.Println("Sending internal order to id:", id, ", Order: ", goal_floor, BUTTON_INTERNAL)
+
+					if elev_floor-goal_floor < 0 {
+						//going upwards
+						for i := 2; i < 5; i++ {
+							if internal_orders[id][i] != -1 && internal_orders[id][i] < goal_floor && elev_floor < internal_orders[id][i] {
+								goal_floor = internal_orders[id][i]
+								"Choosing to stop by floor: ", goal_floor
+							}
+						}
+					} else {
+						//going downwards
+						for i := 2; i < 5; i++ {
+							if internal_orders[id][i] != -1 && internal_orders[id][i] > goal_floor && internal_orders[id][i] < elev_floor {
+								goal_floor = internal_orders[id][i]
+								"Choosing to stop by floor: ", goal_floor
+							}
+						}
+					}
 					o := &Order{
 						ButtonPress: BUTTON_INTERNAL,
-						Floor:       cost_matrix[0][order_taken],
+						Floor:       goal_floor,
 					}
-					fmt.Println("Sending internal order to id:", id, ", Order: ", cost_matrix[0][order_taken], BUTTON_INTERNAL)
+					fmt.Println("Sending internal order to id:", id, ", Order: ", goal_floor, BUTTON_INTERNAL)
 					print_matrix(cost_matrix, num_elevs, num_orders)
 					return o
 				} else {
