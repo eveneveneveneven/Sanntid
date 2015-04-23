@@ -50,7 +50,7 @@ func costFunction(network_msg *NetworkMessage) *Order {
 		}
 	}
 
-	dirs := make(map[int]int)
+	dirs := make([]int, number_of_elevs)
 
 	j := 0
 	//taken_order_number :=0
@@ -194,7 +194,7 @@ func switch_rows(cost_matrix [][]int, switching_floor int, lowest_order int) [][
 }
 
 func sort_according_to_ordered_values(network_msg *NetworkMessage, id int, cost_matrix [][]int,
-	num_elevs int, num_orders int, dirs map[int]int,
+	num_elevs int, num_orders int, dirs []int,
 	internal_orders map[int][]int) *Order {
 	lowest_order := 10
 	for i := 0; i < num_orders-num_elevs; i++ {
@@ -221,7 +221,7 @@ func sort_according_to_ordered_values(network_msg *NetworkMessage, id int, cost_
 }
 
 func check_for_similar_buttons(network_msg *NetworkMessage, cost_matrix [][]int,
-	num_elevs int, num_orders int, dirs map[int]int) [][]int {
+	num_elevs int, num_orders int, dirs []int) [][]int {
 	for id := range network_msg.Statuses {
 		number_of_occuring_down_values := 0
 		number_of_occuring_up_values := 0

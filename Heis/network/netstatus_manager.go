@@ -2,6 +2,7 @@ package network
 
 import (
 	"fmt"
+	"sort"
 
 	"../types"
 )
@@ -63,6 +64,20 @@ func (ns *netStatManager) sendUpdate() {
 	nm := types.NewNetworkMessage()
 	types.Clone(nm, ns.netstat)
 	ns.update <- nm
+	var ids sort.IntSlice = nil
+	for id := range ns.netstat.Statuses {
+		ids = append(ids, id)
+	}
+	sort.Sort(ids)
+	newStatues := make(map[int]types.ElevStat)
+	for i, id := range ids {
+		if id-i != 0 {
+			newStatues[id-i] = ns.netstat.Statuses[id]
+		} else {
+			newStatues[id] = ns.netstat.Statuses[id]
+		}
+	}
+	ns.netstat.Statuses = newStatues
 	for order, completed := range ns.netstat.Orders {
 		if completed {
 			delete(ns.netstat.Orders, order)
