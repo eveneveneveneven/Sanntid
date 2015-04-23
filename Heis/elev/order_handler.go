@@ -10,22 +10,18 @@ type orderHandler struct {
 	currObj *types.Order
 	lastObj *types.Order
 
-	newNetwork chan *types.NetworkMessage
+	newNetwork chan types.NetworkMessage
 	sendNewObj chan types.Order
-
-	reset chan bool
 }
 
-func newOrderHandler(newNetworkCh chan *types.NetworkMessage,
-	sendNewObjCh chan types.Order, resetCh chan bool) *orderHandler {
+func newOrderHandler(newNetworkCh chan types.NetworkMessage,
+	sendNewObjCh chan types.Order) *orderHandler {
 	return &orderHandler{
 		currObj: nil,
 		lastObj: nil,
 
 		newNetwork: newNetworkCh,
 		sendNewObj: sendNewObjCh,
-
-		reset: resetCh,
 	}
 }
 
@@ -34,9 +30,7 @@ func (oh *orderHandler) run() {
 	for {
 		select {
 		case newNetwork := <-oh.newNetwork:
-			oh.parseNewNetwork(newNetwork)
-		case <-oh.reset:
-			oh.lastObj = nil
+			oh.parseNewNetwork(&newNetwork)
 		}
 	}
 }

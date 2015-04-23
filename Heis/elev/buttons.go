@@ -6,8 +6,8 @@ import (
 )
 
 func buttonListener(orderLn chan types.Order) {
-	pressed := make([][]bool, 4)
-	for i := 0; i < 4; i++ {
+	pressed := make([][]bool, M_FLOORS)
+	for i := 0; i < M_FLOORS; i++ {
 		pressed[i] = make([]bool, 3)
 		for j := 0; j < 3; j++ {
 			pressed[i][j] = false
@@ -15,9 +15,9 @@ func buttonListener(orderLn chan types.Order) {
 	}
 
 	for {
-		for f := 0; f < 4; f++ {
+		for f := 0; f < M_FLOORS; f++ {
 			for b := 0; b < 3; b++ {
-				if (f == 0 && b == 1) || (f == 3 && b == 0) {
+				if (f == 0 && b == 1) || (f == M_FLOORS-1 && b == 0) {
 					continue
 				}
 				if driver.Heis_get_button(b, f) {

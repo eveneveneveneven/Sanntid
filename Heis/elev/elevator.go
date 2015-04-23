@@ -23,13 +23,13 @@ type Elevator struct {
 	objDone chan bool
 	stop    chan bool
 
-	newElevstat chan *types.ElevStat
+	newElevstat chan types.ElevStat
 
 	newObj      chan types.Order
 	objComplete chan types.Order
 }
 
-func newElevator(newElevstatCh chan *types.ElevStat,
+func newElevator(newElevstatCh chan types.ElevStat,
 	newObjCh, objCompleteCh chan types.Order) *Elevator {
 	driver.Heis_init()
 	el := &Elevator{
@@ -64,7 +64,7 @@ func (el *Elevator) run() {
 				el.stop = make(chan bool)
 			}
 			el.obj = &obj
-			go el.goToObjective(el.stop)
+			go el.goToObjective(el.stop, obj, el.state.Floor)
 		case <-el.objDone:
 			fmt.Println("elev objdone")
 			el.objComplete <- *el.obj
@@ -78,18 +78,18 @@ func (el *Elevator) run() {
 			fmt.Println("elev dirln")
 			el.state.Dir = newDir
 			select {
-			case el.newElevstat <- el.state:
+			case el.newElevstat <- *el.state:
 			case <-el.newElevstat:
-				el.newElevstat <- el.state
+				el.newElevstat <- *el.state
 				fmt.Println("flushing elev dirln")
 			}
 		case newFloor := <-el.floorLn:
 			fmt.Println("elev floorln")
 			el.state.Floor = newFloor
 			select {
-			case el.newElevstat <- el.state:
+			case el.newElevstat <- *el.state:
 			case <-el.newElevstat:
-				el.newElevstat <- el.state
+				el.newElevstat <- *el.state
 				fmt.Println("flushing elev floorln")
 			}
 		}
@@ -105,7 +105,7 @@ func (el *Elevator) elevInit() {
 		var floor int
 		for {
 			floor = driver.Heis_get_floor()
-			if floor != -1 {
+			if floor != -1 && floor < M_FLOORS {
 				break
 			}
 		}
@@ -125,9 +125,9 @@ func (el *Elevator) floorListener() {
 	}
 }
 
-func (el *Elevator) goToObjective(stop chan bool) {
-	dest := el.obj.Floor
-	diff := dest - el.state.Floor
+func (el *Elevator) goToObjective(stop chan bool, obj types.Order, currFloor int) {
+	dest := obj.Floor
+	diff := dest - currFloor
 	if diff > 0 {
 		el.goDirection(types.UP)
 	} else if diff < 0 {

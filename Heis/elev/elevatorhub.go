@@ -6,6 +6,10 @@ import (
 	"../types"
 )
 
+const (
+	M_FLOORS = 4
+)
+
 type ElevatorHub struct {
 	cleanup chan bool
 
@@ -17,11 +21,10 @@ type ElevatorHub struct {
 	msgSend    chan *types.NetworkMessage
 	msgRecieve chan *types.NetworkMessage
 
-	newNetwork chan *types.NetworkMessage
+	newNetwork chan types.NetworkMessage
 	newObj     chan types.Order
-	reset      chan bool
 
-	newElevstat chan *types.ElevStat
+	newElevstat chan types.ElevStat
 	sendElevObj chan types.Order
 	objComplete chan types.Order
 
@@ -43,11 +46,10 @@ func NewElevatorHub(cleanupCh chan bool,
 		msgSend:    sendCh,
 		msgRecieve: recieveCh,
 
-		newNetwork: make(chan *types.NetworkMessage),
+		newNetwork: make(chan types.NetworkMessage),
 		newObj:     make(chan types.Order),
-		reset:      make(chan bool),
 
-		newElevstat: make(chan *types.ElevStat, 1),
+		newElevstat: make(chan types.ElevStat, 1),
 		sendElevObj: make(chan types.Order, 1),
 		objComplete: make(chan types.Order, 1),
 
@@ -55,7 +57,7 @@ func NewElevatorHub(cleanupCh chan bool,
 
 		elev: nil,
 	}
-	go newOrderHandler(eh.newNetwork, eh.newObj, eh.reset).run()
+	go newOrderHandler(eh.newNetwork, eh.newObj).run()
 	go buttonListener(eh.buttonPress)
 	eh.elev = newElevator(eh.newElevstat, eh.sendElevObj, eh.objComplete)
 	go eh.elev.run()
@@ -84,7 +86,7 @@ func (eh *ElevatorHub) Run() {
 			fmt.Println("msgRecieve done")
 		case elevstat := <-eh.newElevstat:
 			fmt.Println("newElevstat")
-			eh.parseNewElevstat(elevstat)
+			eh.parseNewElevstat(&elevstat)
 			fmt.Println("newElevstat done")
 		case order := <-eh.buttonPress:
 			fmt.Println("buttonPress done")
@@ -140,7 +142,7 @@ func (eh *ElevatorHub) parseNewMsg(netstat *types.NetworkMessage) {
 	eh.removeRedundantOrders(response)
 	eh.currElevstat.InternalOrders = internal
 	eh.currNetwork.Statuses[eh.currNetwork.Id] = *eh.currElevstat
-	eh.newNetwork <- eh.currNetwork
+	eh.newNetwork <- *eh.currNetwork
 	eh.msgSend <- response
 	fmt.Println("currnetw ::", eh.currNetwork)
 	fmt.Println("response ::", response)
