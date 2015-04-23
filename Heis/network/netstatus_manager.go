@@ -28,8 +28,10 @@ func newNetStatManager(newMsgCh, updateCh chan *types.NetworkMessage,
 	return ns
 }
 
-func (ns *netStatManager) run() {
+func (ns *netStatManager) run(currNetstat *types.NetworkMessage) {
 	fmt.Println("Start NetStatManager!")
+	ns.netstat = currNetstat
+	ns.netstat.Id = 0
 	for {
 		select {
 		case newMsg := <-ns.newMsg:

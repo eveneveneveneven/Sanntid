@@ -9,10 +9,6 @@ import (
 )
 
 type NetworkHub struct {
-	noBackup     bool
-	startBackup  chan bool
-	createBackup chan bool
-
 	id int
 
 	networkStatus *types.NetworkMessage
@@ -31,13 +27,8 @@ type NetworkHub struct {
 	netstatTick   chan bool
 }
 
-func NewNetworkHub(noBackup bool, startBackupCh, createBackupCh chan bool,
-	sendLocalCh, recieveLocalCh chan *types.NetworkMessage) *NetworkHub {
+func NewNetworkHub(sendLocalCh, recieveLocalCh chan *types.NetworkMessage) *NetworkHub {
 	nh := &NetworkHub{
-		noBackup:     noBackup,
-		startBackup:  startBackupCh,
-		createBackup: createBackupCh,
-
 		id: -1,
 
 		networkStatus: types.NewNetworkMessage(),
@@ -46,13 +37,13 @@ func NewNetworkHub(noBackup bool, startBackupCh, createBackupCh chan bool,
 		foundMaster:   make(chan string),
 		missingMaster: make(chan bool),
 
-		msgRecieveGlobal: make(chan *types.NetworkMessage),
+		msgRecieveGlobal: make(chan *types.NetworkMessage, 10),
 		msgRecieveLocal:  recieveLocalCh,
-		msgSendGlobal:    make(chan *types.NetworkMessage),
+		msgSendGlobal:    make(chan *types.NetworkMessage, 1),
 		msgSendLocal:     sendLocalCh,
 
-		netstatNewMsg: make(chan *types.NetworkMessage),
-		netstatUpdate: make(chan *types.NetworkMessage),
+		netstatNewMsg: make(chan *types.NetworkMessage, 10),
+		netstatUpdate: make(chan *types.NetworkMessage, 1),
 		netstatTick:   make(chan bool),
 	}
 	nh.cm = newConnManager(nh.msgRecieveGlobal, nh.msgSendGlobal)
@@ -95,6 +86,7 @@ slaveloop:
 			connected = false
 		case msgRecieve := <-nh.msgRecieveGlobal:
 			nh.id = msgRecieve.Id
+			types.Clone(nh.networkStatus, msgRecieve)
 			fmt.Println("trying to send 1 ::", msgRecieve)
 			nh.msgSendLocal <- msgRecieve
 			fmt.Println("success 1")
@@ -106,27 +98,32 @@ slaveloop:
 		}
 	}
 
-	if !nh.noBackup {
-		go StartBackupBroadcast()
-		nh.createBackup <- true
-	}
 	go startUDPBroadcast()
-	go newNetStatManager(nh.netstatNewMsg, nh.netstatUpdate, nh.netstatTick).run()
+	go newNetStatManager(nh.netstatNewMsg, nh.netstatUpdate, nh.netstatTick).run(nh.networkStatus)
 
 	tick := time.Tick(types.SEND_INTERVAL * time.Millisecond)
 	// Master loop
 	for {
 		select {
 		case msgRecGlobal := <-nh.msgRecieveGlobal:
+			fmt.Println("trying to send netstat global")
 			nh.netstatNewMsg <- msgRecGlobal
+			fmt.Println("trying to send netstat global done")
 		case msgRecLocal := <-nh.msgRecieveLocal:
+			fmt.Println("trying to send netstat local")
 			nh.netstatNewMsg <- msgRecLocal
+			fmt.Println("trying to send netstat local done")
 		case <-tick:
+			fmt.Println("trying to send netstat tick")
 			nh.netstatTick <- true
+			fmt.Println("trying to send netstat tick done")
 		case newNetstat := <-nh.netstatUpdate:
 			nh.networkStatus = newNetstat
+			fmt.Println("trying to send global")
 			nh.msgSendGlobal <- newNetstat
+			fmt.Println("trying to send local")
 			nh.msgSendLocal <- newNetstat
+			fmt.Println("trying to send done")
 		}
 	}
 }

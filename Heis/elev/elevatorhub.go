@@ -68,7 +68,7 @@ func (eh *ElevatorHub) Run() {
 		select {
 		case <-eh.cleanup:
 			eh.elev.goDirection(types.STOP)
-			fmt.Println("Proram is quitting")
+			fmt.Println("Program is quitting")
 			return
 		case obj := <-eh.newObj:
 			fmt.Println("parseNewObj")
@@ -89,7 +89,7 @@ func (eh *ElevatorHub) Run() {
 		case order := <-eh.buttonPress:
 			fmt.Println("buttonPress done")
 			eh.parseButtonPress(order)
-			fmt.Println("newElevstat done")
+			fmt.Println("buttonPress done")
 		}
 	}
 }
