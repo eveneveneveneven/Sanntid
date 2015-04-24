@@ -69,8 +69,10 @@ func startUDPBroadcast(resetCh chan bool) {
 	tick := time.Tick(100 * time.Millisecond)
 	for {
 		select {
-		case <-resetCh:
-			return
+		case _, ok := <-resetCh:
+			if !ok {
+				return
+			}
 		case <-tick:
 			fmt.Fprintf(conn, ip) // trick to send a message on the UDP network!
 			if err != nil {

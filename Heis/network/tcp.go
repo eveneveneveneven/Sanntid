@@ -30,12 +30,12 @@ func sendToTCPConn(encoder *gob.Encoder, msg *types.NetworkMessage) error {
 }
 
 func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *types.NetworkMessage,
-	connEnd chan *net.TCPConn, wg *sync.WaitGroup) {
+	connEnd chan *net.TCPConn, terminate chan bool, wg *sync.WaitGroup) {
 
 	fmt.Println("\t\tStarting new TCP handler!")
 	encoder := gob.NewEncoder(conn)
 	decoder := gob.NewDecoder(conn)
-	stop := make(chan bool)
+	stop := make(chan bool, 1)
 	recieve := make(chan *types.NetworkMessage)
 	numErrorSend := 0
 	go readFromTCPConn(decoder, recieve, stop)
@@ -46,12 +46,18 @@ func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *types.Netwo
 			connEnd <- conn
 			conn.Close()
 			return
+		case <-terminate:
+			conn.Close()
+			return
 		default:
 		}
 
 		select {
 		case <-stop:
 			connEnd <- conn
+			conn.Close()
+			return
+		case <-terminate:
 			conn.Close()
 			return
 		case recieveMsg := <-recieve:

@@ -83,13 +83,9 @@ func (eh *ElevatorHub) Run() {
 			eh.parseObjComplete(obj)
 			fmt.Println("parseObjComplete done")
 		case netstat := <-eh.msgRecieve:
-			fmt.Println("msgRecieve")
 			eh.parseNewMsg(netstat)
-			fmt.Println("msgRecieve done")
 		case elevstat := <-eh.newElevstat:
-			fmt.Println("newElevstat")
 			eh.parseNewElevstat(&elevstat)
-			fmt.Println("newElevstat done")
 		case order := <-eh.buttonPress:
 			eh.parseButtonPress(order)
 		}
@@ -120,13 +116,11 @@ func (eh *ElevatorHub) parseObjComplete(obj types.Order) {
 			eh.newOrders[*newObj] = true
 		}
 	}
-	//eh.currElevstat.Dir = types.STOP
 	eh.currElevstat.Floor = obj.Floor
 }
 
 func (eh *ElevatorHub) parseNewMsg(netstat *types.NetworkMessage) {
 	fmt.Println("recieved ::", netstat)
-	fmt.Println("currElev ::", eh.currElevstat)
 	eh.currNetwork = netstat
 	setActiveLights(netstat)
 	response := types.NewNetworkMessage()

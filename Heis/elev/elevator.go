@@ -93,7 +93,7 @@ func (el *Elevator) run() {
 }
 
 func (el *Elevator) elevInit() {
-	fmt.Println("Elev init")
+	fmt.Println("Elevator init")
 	driver.Heis_set_speed(0)
 	time.Sleep(100 * time.Millisecond)
 	if driver.Heis_get_floor() == -1 {
@@ -109,6 +109,7 @@ func (el *Elevator) elevInit() {
 		el.state.Floor = floor
 		el.state.Dir = types.STOP
 	}
+	fmt.Println("Elevator init done")
 }
 
 func (el *Elevator) floorListener() {
@@ -123,7 +124,6 @@ func (el *Elevator) floorListener() {
 }
 
 func (el *Elevator) goToObjective(stop chan bool, obj types.Order, currFloor int) {
-	fmt.Println("GOING TO OBJ ::", obj, ":: currFloor ::", currFloor)
 	dest := obj.Floor
 	diff := dest - currFloor
 	if diff > 0 {
@@ -145,21 +145,17 @@ func (el *Elevator) goToObjective(stop chan bool, obj types.Order, currFloor int
 		}
 	}
 	el.objDone <- true
-	fmt.Println("I AM THERE!")
 }
 
 func (el *Elevator) goDirection(dir int) {
 	switch dir {
 	case types.UP:
-		fmt.Println("GOING UP")
 		driver.Heis_set_speed(SPEED)
 		el.dirLn <- types.UP
 	case types.DOWN:
-		fmt.Println("GOING DOWN")
 		driver.Heis_set_speed(-SPEED)
 		el.dirLn <- types.DOWN
 	case types.STOP:
-		fmt.Println("GOING STOP")
 		driver.Heis_set_speed(0)
 		el.dirLn <- types.STOP
 	default:

@@ -29,12 +29,16 @@ func newNetStatManager(newMsgCh, updateCh chan *types.NetworkMessage,
 	return ns
 }
 
-func (ns *netStatManager) run(currNetstat *types.NetworkMessage) {
+func (ns *netStatManager) run(currNetstat *types.NetworkMessage, resetCh chan bool) {
 	fmt.Println("Start NetStatManager!")
 	ns.netstat = currNetstat
 	ns.netstat.Id = 0
 	for {
 		select {
+		case _, ok := <-resetCh:
+			if !ok {
+				return
+			}
 		case newMsg := <-ns.newMsg:
 			ns.parseNewMsg(newMsg)
 		case <-ns.tick:
@@ -74,15 +78,16 @@ func (ns *netStatManager) sendUpdate() {
 			newStatues[id] = ns.netstat.Statuses[id]
 		}
 	}
-	ns.netstat.Statuses = newStatues
-	types.Clone(nm, ns.netstat)
-	ns.update <- nm
-
 	for order, completed := range ns.netstat.Orders {
 		if completed {
 			delete(ns.netstat.Orders, order)
 		}
 	}
+	ns.netstat.Statuses = newStatues
+	types.Clone(nm, ns.netstat)
+	fmt.Println("netstat out ::", ns.netstat)
+	ns.update <- nm
+
 	for id := range ns.netstat.Statuses {
 		if id != 0 {
 			delete(ns.netstat.Statuses, id)

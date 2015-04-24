@@ -13,10 +13,25 @@ func abs(value int) int {
 	return value
 }
 
-var optimal_id int
+func validateNetstat(netstat *NetworkMessage) bool {
+	numElevs := len(netstat.Statuses)
+	for id := 0; id < numElevs; id++ {
+		if _, ok := netstat.Statuses[id]; !ok {
+			return false
+		}
+		if len(netstat.Statuses[id].InternalOrders) != 4 {
+			return false
+		}
+	}
+	return true
+}
 
 func costFunction(network_msg *NetworkMessage) *Order {
 	fmt.Println("inn netmsg ::", network_msg)
+	if !validateNetstat(network_msg) {
+		fmt.Println("not valid")
+		return nil
+	}
 	noInternal := true
 	for _, order := range network_msg.Statuses[network_msg.Id].InternalOrders {
 		if order != -1 {
@@ -63,7 +78,6 @@ func costFunction(network_msg *NetworkMessage) *Order {
 		} else {
 			order_button_value = DOWN
 		}
-		optimal_id = -1
 
 		for id, elevStat := range network_msg.Statuses {
 			diff_cost := 0
@@ -92,7 +106,7 @@ func costFunction(network_msg *NetworkMessage) *Order {
 			} else {
 				dir_order = STOP
 			}
-			fmt.Println("dir_elev ::", dir_elev, ":: dir_order ::", dir_order)
+
 			if dir_order == dir_elev || dir_elev == STOP {
 				dir_cost = 0
 			} else {
@@ -290,7 +304,7 @@ func smallest_total_cost(id int, cost_matrix [][]int, num_elevs int,
 				}
 			}
 		}
-		print_matrix(cost_matrix, num_elevs, num_orders)
+		//print_matrix(cost_matrix, num_elevs, num_orders)
 		if smallest_cost < 50 {
 			if id == best_id-2 {
 				if order_taken >= num_orders-num_elevs {

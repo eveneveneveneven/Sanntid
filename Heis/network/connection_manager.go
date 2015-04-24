@@ -9,8 +9,9 @@ import (
 )
 
 type connection struct {
-	id      int
-	sendMsg chan *types.NetworkMessage
+	id        int
+	sendMsg   chan *types.NetworkMessage
+	terminate chan bool
 }
 
 type connManager struct {
@@ -71,6 +72,7 @@ func (cm *connManager) run() {
 		case sendMsg := <-cm.hubSend:
 			numConns := len(cm.conns)
 			if numConns > 0 {
+				fmt.Println("starting sending")
 				cm.wg.Add(numConns)
 				for _, c := range cm.conns {
 					msgHolder := new(types.NetworkMessage)
@@ -79,6 +81,7 @@ func (cm *connManager) run() {
 					c.sendMsg <- msgHolder
 				}
 				cm.wg.Wait()
+				fmt.Println("sending done")
 			}
 		}
 	}
@@ -98,12 +101,13 @@ func (cm *connManager) connectToNetwork(masterIP string) error {
 func (cm *connManager) addConnection(conn *net.TCPConn) {
 	fmt.Printf("\tAdding connection [%v] with id %v\n", conn, cm.currId)
 	c := &connection{
-		id:      cm.currId,
-		sendMsg: make(chan *types.NetworkMessage),
+		id:        cm.currId,
+		sendMsg:   make(chan *types.NetworkMessage),
+		terminate: make(chan bool, 1),
 	}
 	cm.conns[conn] = c
 	cm.currId++
-	go createTCPHandler(conn, cm.wakeRecieve, c.sendMsg, cm.connEnd, cm.wg)
+	go createTCPHandler(conn, cm.wakeRecieve, c.sendMsg, cm.connEnd, c.terminate, cm.wg)
 }
 
 func (cm *connManager) removeConnection(conn *net.TCPConn) {
@@ -119,5 +123,12 @@ func (cm *connManager) removeConnection(conn *net.TCPConn) {
 	} else {
 		fmt.Println("\t\t\x1b[31;1mError\x1b[0m |cm.removeConnection|",
 			"[Did not find a connection to remove in the connection list]")
+	}
+}
+
+func (cm *connManager) resetConnections() {
+	for conn, c := range cm.conns {
+		c.terminate <- true
+		cm.removeConnection(conn)
 	}
 }

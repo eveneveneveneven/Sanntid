@@ -16,7 +16,7 @@ import (
 	"./types"
 )
 
-var child = flag.Bool("c", false, "decides if the program is a child")
+var child = flag.Bool("c", false, "Notifies if the program is a child process")
 
 func init() {
 	flag.Parse()
@@ -52,7 +52,7 @@ func main() {
 		networkHub := network.NewNetworkHub(nethubToElevCh, elevToNethubCh)
 
 		go elevatorHub.Run()
-		go networkHub.Run(false)
+		go networkHub.Run()
 
 		select {}
 	}

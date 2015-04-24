@@ -3,6 +3,7 @@ package network
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"../types"
@@ -52,7 +53,7 @@ func NewNetworkHub(sendLocalCh, recieveLocalCh chan *types.NetworkMessage) *Netw
 	return nh
 }
 
-func (nh *NetworkHub) Run(reset bool) {
+func (nh *NetworkHub) Run() {
 	fmt.Println("Start NetworkHub!")
 
 	connected := false
@@ -96,7 +97,8 @@ slaveloop:
 
 	resetCh := make(chan bool)
 	go startUDPBroadcast(resetCh)
-	go newNetStatManager(nh.netstatNewMsg, nh.netstatUpdate, nh.netstatTick).run(nh.networkStatus)
+	go newNetStatManager(nh.netstatNewMsg, nh.netstatUpdate, nh.netstatTick).
+		run(nh.networkStatus, resetCh)
 
 	tick := time.Tick(types.SEND_INTERVAL * time.Millisecond)
 	// Master loop
@@ -112,10 +114,15 @@ slaveloop:
 			nh.networkStatus = newNetstat
 			nh.msgSendGlobal <- newNetstat
 			nh.msgSendLocal <- newNetstat
-		case <-nh.foundMaster:
-			resetCh <- true
-			go nh.Run(true)
-			return
+		case foundIp := <-nh.foundMaster:
+			myIp := getLocalAddress()
+			fmt.Println("\x1b[31;1m::: MULTIPLE MASTERS FOUND :::\x1b[0m")
+			if strings.Split(foundIp, ".")[3] < strings.Split(myIp, ".")[3] {
+				fmt.Println("\x1b[31;1m::: RESETTING :::\x1b[0m")
+				os.Exit(0)
+			} else {
+				fmt.Println("\x1b[31;1m::: CLAIM MASTER :::\x1b[0m")
+			}
 		}
 	}
 }

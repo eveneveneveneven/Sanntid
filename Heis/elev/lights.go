@@ -21,12 +21,22 @@ func clearAllLights() {
 }
 
 func setActiveLights(netstat *types.NetworkMessage) {
-	for order, completed := range netstat.Orders {
-		if completed {
-			delete(netstat.Orders, order)
+	for f := 0; f < M_FLOORS; f++ {
+		for b := 0; b < 3; b++ {
+			if (f == 0 && b == 1) || (f == 3 && b == 0) {
+				continue
+			}
+			if b != types.BUTTON_INTERNAL {
+				order := types.Order{ButtonPress: b, Floor: f}
+				if _, ok := netstat.Orders[order]; !ok {
+					setOrderLight(&order, true)
+				} else {
+					setOrderLight(&order, false)
+				}
+			}
 		}
-		setOrderLight(&order, completed)
 	}
+
 	etgs := []bool{true, true, true, true}
 	for _, etg := range netstat.Statuses[netstat.Id].InternalOrders {
 		if etg != -1 {
