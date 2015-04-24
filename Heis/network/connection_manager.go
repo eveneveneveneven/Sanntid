@@ -8,6 +8,10 @@ import (
 	"../types"
 )
 
+const (
+	BUFFER_MSG_RECIEVED = 20
+)
+
 type connection struct {
 	id        int
 	sendMsg   chan *types.NetworkMessage
@@ -36,7 +40,7 @@ func newConnManager(hbRec, hbSend chan *types.NetworkMessage) *connManager {
 		conns:    make(map[*net.TCPConn]*connection),
 
 		// buffer for messages recieved
-		wakeRecieve: make(chan *types.NetworkMessage, types.BUFFER_MSG_RECIEVED),
+		wakeRecieve: make(chan *types.NetworkMessage, BUFFER_MSG_RECIEVED),
 		newConn:     make(chan *net.TCPConn),
 		connEnd:     make(chan *net.TCPConn),
 
@@ -76,7 +80,7 @@ func (cm *connManager) run() {
 				cm.wg.Add(numConns)
 				for _, c := range cm.conns {
 					msgHolder := new(types.NetworkMessage)
-					types.Clone(msgHolder, sendMsg)
+					types.DeepCopy(msgHolder, sendMsg)
 					msgHolder.Id = c.id
 					c.sendMsg <- msgHolder
 				}

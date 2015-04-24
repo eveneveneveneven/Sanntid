@@ -10,6 +10,10 @@ import (
 	"../types"
 )
 
+const (
+	TCP_PORT = 30011
+)
+
 func readFromTCPConn(decoder *gob.Decoder, recieve chan *types.NetworkMessage, stop chan bool) {
 	for {
 		msg := &types.NetworkMessage{}
@@ -85,7 +89,7 @@ func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *types.Netwo
 func startTCPListener(newConn chan *net.TCPConn) {
 	fmt.Println("\t\tStarting TCP listener!")
 	laddr := &net.TCPAddr{
-		Port: types.TCP_PORT,
+		Port: TCP_PORT,
 		IP:   net.ParseIP("localhost"),
 	}
 
@@ -109,7 +113,7 @@ func startTCPListener(newConn chan *net.TCPConn) {
 func createTCPConn(ip string) (*net.TCPConn, error) {
 	fmt.Println("\t\tCreating TCP connection")
 	raddr := &net.TCPAddr{
-		Port: types.TCP_PORT,
+		Port: TCP_PORT,
 		IP:   net.ParseIP(ip),
 	}
 	conn, err := net.DialTCP("tcp", nil, raddr)

@@ -1,6 +1,6 @@
 package types
 
-func Clone(dst, src *NetworkMessage) {
+func DeepCopy(dst, src *NetworkMessage) {
 	dst.Id = src.Id
 	dst.Statuses = make(map[int]ElevStat)
 	for id, elev := range src.Statuses {

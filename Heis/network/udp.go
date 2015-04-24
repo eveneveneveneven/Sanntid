@@ -10,10 +10,14 @@ import (
 	"../types"
 )
 
+const (
+	UDP_PORT = 20011
+)
+
 // Finds the local IP address of the machine
 func getLocalAddress() string {
 	baddr := &net.UDPAddr{
-		Port: types.UDP_PORT,
+		Port: UDP_PORT,
 		IP:   net.IPv4bcast,
 	}
 	tempConn, _ := net.DialUDP("udp4", nil, baddr)
@@ -25,7 +29,7 @@ func getLocalAddress() string {
 func startUDPListener(foundMaster chan string, masterMissing chan bool) {
 	fmt.Println("\tStarting UDP listener!")
 	laddr := &net.UDPAddr{
-		Port: types.UDP_PORT,
+		Port: UDP_PORT,
 		IP:   net.ParseIP("localhost"),
 	}
 	ln, err := net.ListenUDP("udp", laddr)
@@ -55,7 +59,7 @@ func startUDPBroadcast(resetCh chan bool) {
 	fmt.Println("\tStarting UDP broadcast!")
 	// Broadcast address
 	baddr := &net.UDPAddr{
-		Port: types.UDP_PORT,
+		Port: UDP_PORT,
 		IP:   net.IPv4bcast,
 	}
 	conn, err := net.DialUDP("udp", nil, baddr)

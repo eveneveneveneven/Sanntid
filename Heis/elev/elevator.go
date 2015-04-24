@@ -159,8 +159,7 @@ func (el *Elevator) goDirection(dir int) {
 		driver.Heis_set_speed(0)
 		el.dirLn <- types.STOP
 	default:
-		fmt.Printf(`\t\x1b[31;1mError\x1b[0m |el.goDirection| [Direction recieved is not valid,
-			 got the following %v], exit program\n`, dir)
+		fmt.Printf("\t\x1b[31;1mError\x1b[0m |el.goDirection| [Direction recieved is not valid, got the following %v], exit program\n", dir)
 	}
 }
 

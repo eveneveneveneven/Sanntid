@@ -9,6 +9,10 @@ import (
 	"../types"
 )
 
+const (
+	SEND_INTERVAL = 200 // milliseconds
+)
+
 type NetworkHub struct {
 	id int
 
@@ -87,7 +91,7 @@ slaveloop:
 			connected = false
 		case msgRecieve := <-nh.msgRecieveGlobal:
 			nh.id = msgRecieve.Id
-			types.Clone(nh.networkStatus, msgRecieve)
+			types.DeepCopy(nh.networkStatus, msgRecieve)
 			nh.msgSendLocal <- msgRecieve
 		case msgUpdate := <-nh.msgRecieveLocal:
 			nh.networkStatus = msgUpdate

@@ -84,7 +84,7 @@ func (ns *netStatManager) sendUpdate() {
 		}
 	}
 	ns.netstat.Statuses = newStatues
-	types.Clone(nm, ns.netstat)
+	types.DeepCopy(nm, ns.netstat)
 	fmt.Println("netstat out ::", ns.netstat)
 	ns.update <- nm
 

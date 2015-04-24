@@ -1,16 +1,5 @@
 package types
 
-// Constant parameters for the network
-const (
-	UDP_PORT = 20011
-	TCP_PORT = 30011
-
-	BACKUP_PORT = 40011
-
-	SEND_INTERVAL       = 200 // milliseconds
-	BUFFER_MSG_RECIEVED = 20
-)
-
 // Type definitions for the elevator and networkmessage protocol
 const (
 	UP int = iota
