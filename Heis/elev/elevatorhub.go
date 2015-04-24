@@ -3,6 +3,7 @@ package elev
 import (
 	"fmt"
 
+	"../backup"
 	"../types"
 )
 
@@ -61,6 +62,7 @@ func NewElevatorHub(cleanupCh chan bool,
 	go buttonListener(eh.buttonPress)
 	eh.elev = newElevator(eh.newElevstat, eh.sendElevObj, eh.objComplete)
 	go eh.elev.run()
+	processInternalBackup()
 	return eh
 }
 
@@ -136,6 +138,7 @@ func (eh *ElevatorHub) parseNewMsg(netstat *types.NetworkMessage) {
 			respElevStat.InternalOrders[i] = v
 		}
 	}
+	backup.WriteInternalBackup(internal)
 	respElevStat.Dir = eh.currElevstat.Dir
 	respElevStat.Floor = eh.currElevstat.Floor
 	response.Statuses[response.Id] = respElevStat

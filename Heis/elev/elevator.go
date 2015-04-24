@@ -2,8 +2,10 @@ package elev
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
+	"../backup"
 	"../driver"
 	"../types"
 )
@@ -71,7 +73,7 @@ func (el *Elevator) run() {
 			close(el.stop)
 			el.stop = make(chan bool)
 			go el.goDirection(types.STOP)
-			el.openDoors()
+			openDoors()
 			fmt.Println("elev close doors")
 			el.obj = nil
 		case newDir := <-el.dirLn:
@@ -166,8 +168,44 @@ func (el *Elevator) goDirection(dir int) {
 	}
 }
 
-func (el *Elevator) openDoors() {
+func openDoors() {
 	driver.Heis_set_door_open_lamp(1)
 	time.Sleep(DOOR_TIMER * time.Millisecond)
 	driver.Heis_set_door_open_lamp(0)
+}
+
+func processInternalBackup() {
+	internal := sort.IntSlice(backup.ReadInternalBackup())
+	sort.Sort(internal)
+	clearAllLights()
+	currFloor := driver.Heis_get_floor()
+	var orders []types.Order = nil
+	for i := len(internal) - 1; i >= 0; i-- {
+		etg := internal[i]
+		if etg != -1 {
+			order := types.Order{
+				ButtonPress: types.BUTTON_INTERNAL,
+				Floor:       etg,
+			}
+			orders = append(orders, order)
+			setOrderLight(&order, false)
+		} else {
+			break
+		}
+	}
+	for _, order := range orders {
+		diff := order.Floor - currFloor
+		if diff > 0 {
+			driver.Heis_set_speed(SPEED)
+		} else if diff < 0 {
+			driver.Heis_set_speed(-SPEED)
+		}
+		for currFloor != order.Floor {
+			currFloor = driver.Heis_get_floor()
+		}
+		driver.Heis_set_speed(0)
+		setOrderLight(&order, true)
+		openDoors()
+	}
+	backup.WriteInternalBackup([]int{-1, -1, -1, -1})
 }

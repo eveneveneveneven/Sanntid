@@ -53,7 +53,7 @@ func setOrderLight(order *types.Order, completed bool) {
 			driver.Heis_set_button_lamp(b, f, 1)
 		}
 	} else {
-		fmt.Printf("\t\x1b[31;1mError\x1b[0m |SetOrderLight| [Order recieved is not valid, got the following %+v], exit program\n", order)
+		fmt.Printf("\t\x1b[31;1mError\x1b[0m |setOrderLight| [Order recieved is not valid, got the following %+v], exit program\n", order)
 	}
 }
 
