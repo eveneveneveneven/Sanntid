@@ -52,7 +52,7 @@ func NewNetworkHub(sendLocalCh, recieveLocalCh chan *types.NetworkMessage) *Netw
 	return nh
 }
 
-func (nh *NetworkHub) Run() {
+func (nh *NetworkHub) Run(reset bool) {
 	fmt.Println("Start NetworkHub!")
 
 	connected := false
@@ -87,18 +87,15 @@ slaveloop:
 		case msgRecieve := <-nh.msgRecieveGlobal:
 			nh.id = msgRecieve.Id
 			types.Clone(nh.networkStatus, msgRecieve)
-			fmt.Println("trying to send 1 ::", msgRecieve)
 			nh.msgSendLocal <- msgRecieve
-			fmt.Println("success 1")
 		case msgUpdate := <-nh.msgRecieveLocal:
 			nh.networkStatus = msgUpdate
-			fmt.Println("trying to send 2 ::", msgUpdate)
 			nh.msgSendGlobal <- msgUpdate
-			fmt.Println("success 2")
 		}
 	}
 
-	go startUDPBroadcast()
+	resetCh := make(chan bool)
+	go startUDPBroadcast(resetCh)
 	go newNetStatManager(nh.netstatNewMsg, nh.netstatUpdate, nh.netstatTick).run(nh.networkStatus)
 
 	tick := time.Tick(types.SEND_INTERVAL * time.Millisecond)
@@ -106,24 +103,19 @@ slaveloop:
 	for {
 		select {
 		case msgRecGlobal := <-nh.msgRecieveGlobal:
-			fmt.Println("trying to send netstat global")
 			nh.netstatNewMsg <- msgRecGlobal
-			fmt.Println("trying to send netstat global done")
 		case msgRecLocal := <-nh.msgRecieveLocal:
-			fmt.Println("trying to send netstat local")
 			nh.netstatNewMsg <- msgRecLocal
-			fmt.Println("trying to send netstat local done")
 		case <-tick:
-			fmt.Println("trying to send netstat tick")
 			nh.netstatTick <- true
-			fmt.Println("trying to send netstat tick done")
 		case newNetstat := <-nh.netstatUpdate:
 			nh.networkStatus = newNetstat
-			fmt.Println("trying to send global")
 			nh.msgSendGlobal <- newNetstat
-			fmt.Println("trying to send local")
 			nh.msgSendLocal <- newNetstat
-			fmt.Println("trying to send done")
+		case <-nh.foundMaster:
+			resetCh <- true
+			go nh.Run(true)
+			return
 		}
 	}
 }

@@ -60,7 +60,6 @@ func (el *Elevator) run() {
 	for {
 		select {
 		case obj := <-el.newObj:
-			fmt.Println("elev newobj")
 			if el.obj != nil {
 				close(el.stop)
 				el.stop = make(chan bool)
@@ -68,31 +67,26 @@ func (el *Elevator) run() {
 			el.obj = &obj
 			go el.goToObjective(el.stop, obj, el.state.Floor)
 		case <-el.objDone:
-			fmt.Println("elev objdone")
 			el.objComplete <- *el.obj
+			el.state.Floor = el.obj.Floor
 			close(el.stop)
 			el.stop = make(chan bool)
 			go el.goDirection(types.STOP)
 			openDoors()
-			fmt.Println("elev close doors")
 			el.obj = nil
 		case newDir := <-el.dirLn:
-			fmt.Println("elev dirln")
 			el.state.Dir = newDir
 			select {
 			case el.newElevstat <- *el.state:
 			case <-el.newElevstat:
 				el.newElevstat <- *el.state
-				fmt.Println("flushing elev dirln")
 			}
 		case newFloor := <-el.floorLn:
-			fmt.Println("elev floorln")
 			el.state.Floor = newFloor
 			select {
 			case el.newElevstat <- *el.state:
 			case <-el.newElevstat:
 				el.newElevstat <- *el.state
-				fmt.Println("flushing elev floorln")
 			}
 		}
 	}
@@ -113,6 +107,7 @@ func (el *Elevator) elevInit() {
 		}
 		driver.Heis_set_speed(0)
 		el.state.Floor = floor
+		el.state.Dir = types.STOP
 	}
 }
 
@@ -128,6 +123,7 @@ func (el *Elevator) floorListener() {
 }
 
 func (el *Elevator) goToObjective(stop chan bool, obj types.Order, currFloor int) {
+	fmt.Println("GOING TO OBJ ::", obj, ":: currFloor ::", currFloor)
 	dest := obj.Floor
 	diff := dest - currFloor
 	if diff > 0 {
@@ -149,17 +145,21 @@ func (el *Elevator) goToObjective(stop chan bool, obj types.Order, currFloor int
 		}
 	}
 	el.objDone <- true
+	fmt.Println("I AM THERE!")
 }
 
 func (el *Elevator) goDirection(dir int) {
 	switch dir {
 	case types.UP:
+		fmt.Println("GOING UP")
 		driver.Heis_set_speed(SPEED)
 		el.dirLn <- types.UP
 	case types.DOWN:
+		fmt.Println("GOING DOWN")
 		driver.Heis_set_speed(-SPEED)
 		el.dirLn <- types.DOWN
 	case types.STOP:
+		fmt.Println("GOING STOP")
 		driver.Heis_set_speed(0)
 		el.dirLn <- types.STOP
 	default:

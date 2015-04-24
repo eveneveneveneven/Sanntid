@@ -41,7 +41,7 @@ func costFunction(network_msg *NetworkMessage) *Order {
 			elevStat.InternalOrders = []int{-1, -1, -1, -1}
 			network_msg.Statuses[id] = elevStat
 		}
-		fmt.Println("id ::", id, ":: elevstat ::", elevStat)
+		//fmt.Println("id ::", id, ":: elevstat ::", elevStat)
 		internal_orders[id][0] = elevStat.Floor
 		for i := 1; i < 5; i++ {
 			internal_orders[id][i] = elevStat.InternalOrders[i-1]
@@ -92,21 +92,21 @@ func costFunction(network_msg *NetworkMessage) *Order {
 			} else {
 				dir_order = STOP
 			}
-
+			fmt.Println("dir_elev ::", dir_elev, ":: dir_order ::", dir_order)
 			if dir_order == dir_elev || dir_elev == STOP {
 				dir_cost = 0
 			} else {
-				dir_cost += 10
+				dir_cost = 55
 			}
 			if internal_order != -1 {
-				if order_button_value == dir_internal_order &&
+				if dir_order == dir_internal_order &&
 					dir_internal_order == 1 && order_button_floor > internal_order {
 					if floor_elev == order_button_floor && dir_elev != STOP {
 						order_dir_cost = 12
 					} else {
 						order_dir_cost = -8
 					}
-				} else if order_button_value == dir_internal_order &&
+				} else if dir_order == dir_internal_order &&
 					dir_internal_order == 0 && order_button_floor < internal_order {
 					if floor_elev == order_button_floor && dir_elev != STOP {
 						order_dir_cost = 12
@@ -290,7 +290,7 @@ func smallest_total_cost(id int, cost_matrix [][]int, num_elevs int,
 				}
 			}
 		}
-
+		print_matrix(cost_matrix, num_elevs, num_orders)
 		if smallest_cost < 50 {
 			if id == best_id-2 {
 				if order_taken >= num_orders-num_elevs {
@@ -299,22 +299,22 @@ func smallest_total_cost(id int, cost_matrix [][]int, num_elevs int,
 						ButtonPress: BUTTON_INTERNAL,
 						Floor:       goal_floor,
 					}
-					fmt.Println("Sending internal order to id:", id, ", Order: ", goal_floor, BUTTON_INTERNAL)
-					print_matrix(cost_matrix, num_elevs, num_orders)
+					//fmt.Println("Sending internal order to id:", id, ", Order: ", goal_floor, BUTTON_INTERNAL)
+					//print_matrix(cost_matrix, num_elevs, num_orders)
 					return o
 				} else {
 					o := &Order{
 						ButtonPress: cost_matrix[1][order_taken],
 						Floor:       cost_matrix[0][order_taken],
 					}
-					fmt.Println("Sending order to id:", id, ", Order: ", cost_matrix[0][order_taken], cost_matrix[1][order_taken])
-					print_matrix(cost_matrix, num_elevs, num_orders)
+					//fmt.Println("Sending order to id:", id, ", Order: ", cost_matrix[0][order_taken], cost_matrix[1][order_taken])
+					//print_matrix(cost_matrix, num_elevs, num_orders)
 					return o
 				}
 			}
 		} else {
-			print_matrix(cost_matrix, num_elevs, num_orders)
-			fmt.Println("Returning nil")
+			//print_matrix(cost_matrix, num_elevs, num_orders)
+			//fmt.Println("Returning nil")
 			return nil
 		}
 		cost_matrix = add_multiple_orders_penalty(cost_matrix, num_elevs, num_orders, best_id, order_taken)

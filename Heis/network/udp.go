@@ -34,7 +34,7 @@ func startUDPListener(foundMaster chan string, masterMissing chan bool) {
 		os.Exit(1)
 	}
 	defer ln.Close()
-
+	myIp := getLocalAddress()
 	p := make([]byte, 1024)
 	for {
 		ln.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
@@ -44,11 +44,14 @@ func startUDPListener(foundMaster chan string, masterMissing chan bool) {
 			masterMissing <- true
 			continue
 		}
-		foundMaster <- string(p[:n])
+		ipFound := string(p[:n])
+		if ipFound != myIp {
+			foundMaster <- ipFound
+		}
 	}
 }
 
-func startUDPBroadcast() {
+func startUDPBroadcast(resetCh chan bool) {
 	fmt.Println("\tStarting UDP broadcast!")
 	// Broadcast address
 	baddr := &net.UDPAddr{
@@ -65,10 +68,14 @@ func startUDPBroadcast() {
 	ip := getLocalAddress()
 	tick := time.Tick(100 * time.Millisecond)
 	for {
-		<-tick
-		fmt.Fprintf(conn, ip) // trick to send a message on the UDP network!
-		if err != nil {
-			fmt.Printf("\t\x1b[31;1mError\x1b[0m |startUDPBroadcast| [%v]\n", err)
+		select {
+		case <-resetCh:
+			return
+		case <-tick:
+			fmt.Fprintf(conn, ip) // trick to send a message on the UDP network!
+			if err != nil {
+				fmt.Printf("\t\x1b[31;1mError\x1b[0m |startUDPBroadcast| [%v]\n", err)
+			}
 		}
 	}
 }

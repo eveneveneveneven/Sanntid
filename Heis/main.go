@@ -52,7 +52,7 @@ func main() {
 		networkHub := network.NewNetworkHub(nethubToElevCh, elevToNethubCh)
 
 		go elevatorHub.Run()
-		go networkHub.Run()
+		go networkHub.Run(false)
 
 		select {}
 	}

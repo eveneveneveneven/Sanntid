@@ -59,10 +59,10 @@ func NewElevatorHub(cleanupCh chan bool,
 		elev: nil,
 	}
 	go newOrderHandler(eh.newNetwork, eh.newObj).run()
-	go buttonListener(eh.buttonPress)
 	eh.elev = newElevator(eh.newElevstat, eh.sendElevObj, eh.objComplete)
 	go eh.elev.run()
 	processInternalBackup()
+	go buttonListener(eh.buttonPress)
 	return eh
 }
 
@@ -91,9 +91,7 @@ func (eh *ElevatorHub) Run() {
 			eh.parseNewElevstat(&elevstat)
 			fmt.Println("newElevstat done")
 		case order := <-eh.buttonPress:
-			fmt.Println("buttonPress done")
 			eh.parseButtonPress(order)
-			fmt.Println("buttonPress done")
 		}
 	}
 }
@@ -104,7 +102,6 @@ func (eh *ElevatorHub) parseNewObj(obj types.Order) {
 	select {
 	case eh.sendElevObj <- obj:
 	case <-eh.sendElevObj:
-		fmt.Println("flushing old obj, sending updated one.")
 		eh.sendElevObj <- obj
 	}
 }
@@ -123,10 +120,13 @@ func (eh *ElevatorHub) parseObjComplete(obj types.Order) {
 			eh.newOrders[*newObj] = true
 		}
 	}
+	//eh.currElevstat.Dir = types.STOP
+	eh.currElevstat.Floor = obj.Floor
 }
 
 func (eh *ElevatorHub) parseNewMsg(netstat *types.NetworkMessage) {
 	fmt.Println("recieved ::", netstat)
+	fmt.Println("currElev ::", eh.currElevstat)
 	eh.currNetwork = netstat
 	setActiveLights(netstat)
 	response := types.NewNetworkMessage()
@@ -178,7 +178,6 @@ func (eh *ElevatorHub) mergeOrder(dst *types.NetworkMessage,
 
 func (eh *ElevatorHub) mergeInternalOrder(dst *types.NetworkMessage,
 	order types.Order, value bool) {
-	fmt.Println("merger order ::", order, ":: value ::", value)
 	newEtg := order.Floor
 	internal := dst.Statuses[dst.Id].InternalOrders
 	for i, etg := range internal {
@@ -196,7 +195,6 @@ func (eh *ElevatorHub) mergeInternalOrder(dst *types.NetworkMessage,
 			break
 		}
 	}
-	fmt.Println("and now     ::", internal)
 	elevstat := dst.Statuses[dst.Id]
 	elevstat.InternalOrders = internal
 	var newInternal []int = nil

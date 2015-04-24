@@ -48,7 +48,6 @@ func (ns *netStatManager) parseNewMsg(msg *types.NetworkMessage) {
 	for id = range msg.Statuses {
 		break
 	}
-	fmt.Println("netstatNewMsg id ::", id, ":: msg ::", msg)
 	ns.netstat.Statuses[id] = msg.Statuses[id]
 	for order, completed := range msg.Orders {
 		if completed {
@@ -62,8 +61,6 @@ func (ns *netStatManager) parseNewMsg(msg *types.NetworkMessage) {
 func (ns *netStatManager) sendUpdate() {
 	fmt.Println("netstat  ::", ns.netstat)
 	nm := types.NewNetworkMessage()
-	types.Clone(nm, ns.netstat)
-	ns.update <- nm
 	var ids sort.IntSlice = nil
 	for id := range ns.netstat.Statuses {
 		ids = append(ids, id)
@@ -78,6 +75,9 @@ func (ns *netStatManager) sendUpdate() {
 		}
 	}
 	ns.netstat.Statuses = newStatues
+	types.Clone(nm, ns.netstat)
+	ns.update <- nm
+
 	for order, completed := range ns.netstat.Orders {
 		if completed {
 			delete(ns.netstat.Orders, order)

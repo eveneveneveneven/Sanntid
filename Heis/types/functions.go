@@ -14,7 +14,7 @@ func Clone(dst, src *NetworkMessage) {
 
 func NewElevStat() *ElevStat {
 	return &ElevStat{
-		Dir:            0,
+		Dir:            STOP,
 		Floor:          -1,
 		InternalOrders: []int{-1, -1, -1, -1},
 	}
