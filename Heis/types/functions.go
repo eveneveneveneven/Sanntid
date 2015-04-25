@@ -1,5 +1,9 @@
 package types
 
+import (
+	"strconv"
+)
+
 func DeepCopy(dst, src *NetworkMessage) {
 	dst.Id = src.Id
 	dst.Statuses = make(map[int]ElevStat)
@@ -26,4 +30,18 @@ func NewNetworkMessage() *NetworkMessage {
 		Statuses: make(map[int]ElevStat),
 		Orders:   make(map[Order]bool),
 	}
+}
+
+func (o Order) String() string {
+	str := "Button="
+	switch o.ButtonPress {
+	case BUTTON_CALL_UP:
+		str += "UP"
+	case BUTTON_CALL_DOWN:
+		str += "DOWN"
+	case BUTTON_INTERNAL:
+		str += "INTERNAL"
+	}
+	str += " Floor=" + strconv.Itoa(o.Floor+1)
+	return str
 }

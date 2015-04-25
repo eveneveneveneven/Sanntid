@@ -136,6 +136,9 @@ func (eh *ElevatorHub) checkForAndResolveMultipleMaster(finishAllOrders bool) {
 }
 
 func (eh *ElevatorHub) parseNewObj(obj types.Order) {
+	fmt.Println("\n\x1b[33;1m::: New Objective :::")
+	fmt.Printf("::: %v :::\x1b[0m\n\n", obj)
+
 	eh.currObj = &obj
 	select {
 	case eh.sendElevObj <- obj:
@@ -145,6 +148,8 @@ func (eh *ElevatorHub) parseNewObj(obj types.Order) {
 }
 
 func (eh *ElevatorHub) parseObjComplete(obj types.Order) {
+	fmt.Println("\n\x1b[32;1m::: Objective complete :::")
+	fmt.Printf("::: %v :::\x1b[0m\n", obj)
 	eh.newOrders[obj] = true
 	if obj.ButtonPress != types.BUTTON_INTERNAL {
 		delete(eh.currNetwork.Orders, obj)
@@ -154,11 +159,13 @@ func (eh *ElevatorHub) parseObjComplete(obj types.Order) {
 		eh.mergeOrder(eh.currNetwork, obj, true)
 		newObj := costFunction(eh.currNetwork)
 		if newObj != nil && newObj.Floor == obj.Floor {
+			fmt.Printf("\x1b[32;1m::: %v :::\x1b[0m\n", newObj)
 			delete(eh.currNetwork.Orders, *newObj)
 			eh.newOrders[*newObj] = true
 		}
 	}
 	eh.currElevstat.Floor = obj.Floor
+	fmt.Println()
 }
 
 func (eh *ElevatorHub) parseNewMsg(netstat *types.NetworkMessage) *types.NetworkMessage {
@@ -248,7 +255,11 @@ func (eh *ElevatorHub) parseNewElevstat(elevstat *types.ElevStat) {
 }
 
 func (eh *ElevatorHub) parseButtonPress(order types.Order) {
-	eh.newOrders[order] = false
+	if _, ok := eh.currNetwork.Orders[order]; !ok {
+		fmt.Println("\n\x1b[36;1m::: New Order Received :::")
+		fmt.Printf("::: %v :::\x1b[0m\n\n", order)
+		eh.newOrders[order] = false
+	}
 }
 
 func CleanExit() {

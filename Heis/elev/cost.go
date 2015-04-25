@@ -27,9 +27,8 @@ func validateNetstat(netstat *NetworkMessage) bool {
 }
 
 func costFunction(network_msg *NetworkMessage) *Order {
-	fmt.Println("inn netmsg ::", network_msg)
 	if !validateNetstat(network_msg) {
-		fmt.Println("network_msg not valid")
+		fmt.Println("\t\x1b[31;1mError\x1b[0m |costFunction| [Received network_msg is not valid]\n\n")
 		return nil
 	}
 	noInternal := true

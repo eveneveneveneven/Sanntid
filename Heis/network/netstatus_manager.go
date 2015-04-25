@@ -63,7 +63,6 @@ func (ns *netStatManager) parseNewMsg(msg *types.NetworkMessage) {
 }
 
 func (ns *netStatManager) sendUpdate() {
-	fmt.Println("netstat  ::", ns.netstat)
 	nm := types.NewNetworkMessage()
 	var ids sort.IntSlice = nil
 	for id := range ns.netstat.Statuses {
@@ -85,7 +84,6 @@ func (ns *netStatManager) sendUpdate() {
 	}
 	ns.netstat.Statuses = newStatues
 	types.DeepCopy(nm, ns.netstat)
-	fmt.Println("netstat out ::", ns.netstat)
 	ns.update <- nm
 
 	for id := range ns.netstat.Statuses {

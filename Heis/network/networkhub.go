@@ -74,18 +74,16 @@ slaveloop:
 				continue
 			}
 			if err := nh.cm.connectToNetwork(masterIp); err != nil {
-				fmt.Printf("\x1b[31;1mError\x1b[0m |NetworkHub.Run| [%v], exit program\n", err)
+				fmt.Printf("\x1b[31;1mError\x1b[0m |NetworkHub.Run| [%v], exit program\n\n", err)
 				os.Exit(1)
 			}
 			connected = true
 		case <-nh.missingMaster:
 			switch nh.id {
-			case 1:
-				fmt.Println("Master is dead, I am Master!")
-				nh.id = 0
-				break slaveloop
 			case -1:
-				fmt.Println("There is no Master, claim Master!")
+				fallthrough
+			case 1:
+				fmt.Println("\n\x1b[31;1m::: Becoming Master :::\x1b[0m\n\n")
 				nh.id = 0
 				break slaveloop
 			default:
