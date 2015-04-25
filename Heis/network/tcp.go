@@ -41,7 +41,7 @@ func sendToTCPConn(conn *net.TCPConn, encoder *gob.Encoder,
 	return nil
 }
 
-func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *types.NetworkMessage,
+func runTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *types.NetworkMessage,
 	connEnd chan *net.TCPConn, terminate chan bool, wg *sync.WaitGroup) {
 
 	fmt.Println("\x1b[34;1m::: Start New TCP Handler :::\x1b[0m")
@@ -95,6 +95,7 @@ func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *types.Netwo
 	}
 }
 
+// Listens after incomming connections from other elevators
 func startTCPListener(newConn chan *net.TCPConn) {
 	fmt.Println("\x1b[34;1m::: Start TCP Listener :::\x1b[0m")
 
@@ -120,6 +121,7 @@ func startTCPListener(newConn chan *net.TCPConn) {
 	}
 }
 
+// Creates a new TCP connection with the given IP
 func createTCPConn(ip string) (*net.TCPConn, error) {
 	fmt.Println("\x1b[36;1m::: Creating New TCP Connection :::\x1b[0m")
 	raddr := &net.TCPAddr{

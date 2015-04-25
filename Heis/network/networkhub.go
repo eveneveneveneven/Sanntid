@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	SEND_INTERVAL = 200 // milliseconds
+	SEND_INTERVAL       = 200 // milliseconds
+	BUFFER_MSG_RECIEVED = 20
 )
 
 type NetworkHub struct {
@@ -46,12 +47,12 @@ func NewNetworkHub(resetCh chan bool,
 		foundMaster:   make(chan string),
 		missingMaster: make(chan bool),
 
-		msgRecieveGlobal: make(chan *types.NetworkMessage, 10),
+		msgRecieveGlobal: make(chan *types.NetworkMessage, BUFFER_MSG_RECIEVED),
 		msgRecieveLocal:  recieveLocalCh,
 		msgSendGlobal:    make(chan *types.NetworkMessage, 1),
 		msgSendLocal:     sendLocalCh,
 
-		netstatNewMsg: make(chan *types.NetworkMessage, 10),
+		netstatNewMsg: make(chan *types.NetworkMessage, BUFFER_MSG_RECIEVED),
 		netstatUpdate: make(chan *types.NetworkMessage, 1),
 		netstatTick:   make(chan bool),
 	}
@@ -67,6 +68,7 @@ func (nh *NetworkHub) Run() {
 	fmt.Println("\n\x1b[31;1m::: Becoming Slave :::\x1b[0m\n")
 
 	connected := false
+
 	// Slave loop
 slaveloop:
 	for {

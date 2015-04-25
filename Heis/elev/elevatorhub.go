@@ -111,6 +111,9 @@ func (eh *ElevatorHub) Run() {
 	}
 }
 
+// This will resolve any orders which is active on the local Elevator,
+// and multiple Masters are detected on the network. This is done to avoid
+// duped orders and returning the Elevator to a defined state.
 func (eh *ElevatorHub) checkForAndResolveMultipleMaster(finishAllOrders bool) {
 	if finishAllOrders {
 		fmt.Println("\n\t\x1b[31;1m::: Finish All Orders In Progress :::\x1b[0m\n")
@@ -138,6 +141,7 @@ func (eh *ElevatorHub) checkForAndResolveMultipleMaster(finishAllOrders bool) {
 	}
 }
 
+// Parse new objective given by the order handler
 func (eh *ElevatorHub) parseNewObj(obj types.Order) {
 	fmt.Println("\x1b[33;1m::: New Objective :::")
 	fmt.Printf("::: %v :::\x1b[0m\n\n", obj)
@@ -150,6 +154,7 @@ func (eh *ElevatorHub) parseNewObj(obj types.Order) {
 	}
 }
 
+// Parse the current objective which has completed
 func (eh *ElevatorHub) parseObjComplete(obj types.Order) {
 	fmt.Println("\x1b[32;1m::: Objective complete :::")
 	fmt.Printf("::: %v :::\x1b[0m\n", obj)
@@ -171,6 +176,7 @@ func (eh *ElevatorHub) parseObjComplete(obj types.Order) {
 	fmt.Println()
 }
 
+// Parse incoming message from Master and the new current Network Status
 func (eh *ElevatorHub) parseNewMsg(netstat *types.NetworkMessage) *types.NetworkMessage {
 	eh.currNetwork = netstat
 	setActiveLights(netstat)
@@ -193,6 +199,8 @@ func (eh *ElevatorHub) parseNewMsg(netstat *types.NetworkMessage) *types.Network
 	return response
 }
 
+// Removes redundant orders from the Network Status and the response,
+// which makes sure complete orders are taken care of and notifed in the response.
 func (eh *ElevatorHub) removeRedundantOrders(response *types.NetworkMessage) {
 	for order, completed := range eh.currNetwork.Orders {
 		if completed {
@@ -209,6 +217,7 @@ func (eh *ElevatorHub) removeRedundantOrders(response *types.NetworkMessage) {
 	}
 }
 
+// Merges an order to the destination given
 func (eh *ElevatorHub) mergeOrder(dst *types.NetworkMessage,
 	order types.Order, value bool) {
 	if order.ButtonPress == types.BUTTON_INTERNAL {
@@ -252,11 +261,13 @@ func (eh *ElevatorHub) mergeExternalOrder(dst *types.NetworkMessage,
 	dst.Orders[order] = value
 }
 
+// Parses the new Elevator Status given by the Elevator
 func (eh *ElevatorHub) parseNewElevstat(elevstat *types.ElevStat) {
 	eh.currElevstat.Dir = elevstat.Dir
 	eh.currElevstat.Floor = elevstat.Floor
 }
 
+// Parses any new buttonpresses
 func (eh *ElevatorHub) parseButtonPress(order types.Order) {
 	if _, ok := eh.currNetwork.Orders[order]; !ok {
 		fmt.Println("\x1b[36;1m::: New Order Received :::")

@@ -5,6 +5,8 @@ import (
 	"../types"
 )
 
+// Listens after any buttonpresses and sends it to the ElevatorHub through channels.
+// Will only register one button press if you press the button down.
 func buttonListener(orderLn chan types.Order) {
 	pressed := make([][]bool, M_FLOORS)
 	for i := 0; i < M_FLOORS; i++ {

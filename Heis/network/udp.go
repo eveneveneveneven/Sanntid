@@ -24,6 +24,8 @@ func getLocalAddress() string {
 	return strings.Split(tempAddr.String(), ":")[0] // only want ip
 }
 
+// Listens after the broadcast of a potential Master on the network.
+// Returns if found or missing.
 func startUDPListener(foundMaster chan string, masterMissing chan bool) {
 	fmt.Println("\x1b[34;1m::: Start UDP Listener :::\x1b[0m")
 
@@ -54,6 +56,7 @@ func startUDPListener(foundMaster chan string, masterMissing chan bool) {
 	}
 }
 
+// Used to broadcast a Masters ip on the network. Only Master will use this function.
 func startUDPBroadcast(resetCh chan bool) {
 	fmt.Println("\x1b[34;1m::: Start UDP Broadcaster :::\x1b[0m")
 

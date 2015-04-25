@@ -22,6 +22,7 @@ func init() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 }
 
+// Catches a force kill and stops the elevator before the program exits.
 func cleanupWhenExiting(cleanup chan bool, sigc chan os.Signal) {
 	<-sigc
 	cleanup <- true

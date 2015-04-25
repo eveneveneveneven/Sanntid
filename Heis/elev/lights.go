@@ -20,6 +20,7 @@ func clearAllLights() {
 	driver.Heis_set_door_open_lamp(0)
 }
 
+// Will turn the light on for any active orders
 func setActiveLights(netstat *types.NetworkMessage) {
 	for f := 0; f < M_FLOORS; f++ {
 		for b := 0; b < 3; b++ {
@@ -51,6 +52,7 @@ func setActiveLights(netstat *types.NetworkMessage) {
 	}
 }
 
+// Turn the light on for a single order
 func setOrderLight(order *types.Order, completed bool) {
 	f := order.Floor
 	b := order.ButtonPress
@@ -67,6 +69,7 @@ func setOrderLight(order *types.Order, completed bool) {
 	}
 }
 
+// Setting floor indicator light
 func floorIndicator() {
 	var floor int
 	for {

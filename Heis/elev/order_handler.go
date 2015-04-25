@@ -35,6 +35,8 @@ func (oh *orderHandler) run() {
 	}
 }
 
+// Receives updated Network Statuses and calculates
+// the optimal order for this local elevator.
 func (oh *orderHandler) parseNewNetwork(netstat *types.NetworkMessage) {
 	oh.currObj = costFunction(netstat)
 	if oh.currObj == nil {

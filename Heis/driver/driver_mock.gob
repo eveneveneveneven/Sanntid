@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+// Used while not connected to the Sanntidshall
+
 var r *rand.Rand
 var ti0, ti1 time.Time
 

@@ -4,6 +4,7 @@ import (
 	"strconv"
 )
 
+// Deep copies the Network Status struct
 func DeepCopy(dst, src *NetworkMessage) {
 	dst.Id = src.Id
 	dst.Statuses = make(map[int]ElevStat)
@@ -32,6 +33,7 @@ func NewNetworkMessage() *NetworkMessage {
 	}
 }
 
+// Method to print Orders
 func (o Order) String() string {
 	str := "Button="
 	switch o.ButtonPress {

@@ -8,10 +8,6 @@ import (
 	"../types"
 )
 
-const (
-	BUFFER_MSG_RECIEVED = 20
-)
-
 type connection struct {
 	id        int
 	sendMsg   chan *types.NetworkMessage
@@ -114,7 +110,7 @@ func (cm *connManager) addConnection(conn *net.TCPConn) {
 	}
 	cm.conns[conn] = c
 	cm.currId++
-	go createTCPHandler(conn, cm.wakeRecieve, c.sendMsg, cm.connEnd, c.terminate, cm.wg)
+	go runTCPHandler(conn, cm.wakeRecieve, c.sendMsg, cm.connEnd, c.terminate, cm.wg)
 }
 
 func (cm *connManager) removeConnection(conn *net.TCPConn) {
@@ -130,12 +126,5 @@ func (cm *connManager) removeConnection(conn *net.TCPConn) {
 	} else {
 		fmt.Println("\t\x1b[31;1mError\x1b[0m |cm.removeConnection|",
 			"[Did not find a connection to remove in the connection list]")
-	}
-}
-
-func (cm *connManager) resetConnections() {
-	for conn, c := range cm.conns {
-		c.terminate <- true
-		cm.removeConnection(conn)
 	}
 }

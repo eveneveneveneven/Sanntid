@@ -12,6 +12,8 @@ const (
 	NUM_BACKUPS = 3
 )
 
+// Creates child processes of the main program, and creates new ones if the current dies.
+// This is the bottom Fail-Safe state, which will restart the program if necessary.
 func CreateBackupsAndListen(sigc chan os.Signal) {
 	go func() {
 		iter := 0
@@ -44,6 +46,7 @@ func CreateBackupsAndListen(sigc chan os.Signal) {
 	}
 }
 
+// Read any internal orders stored locally on the computer.
 func ReadInternalBackup() []int {
 	file, err := os.Open("internal.gob")
 	if err != nil {
@@ -61,6 +64,7 @@ func ReadInternalBackup() []int {
 	return rinternal
 }
 
+// Writes internal orders locally on the computer.
 func WriteInternalBackup(winternal []int) error {
 	file, err := os.Create("internal.gob")
 	if err != nil {

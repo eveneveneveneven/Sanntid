@@ -93,6 +93,7 @@ func (el *Elevator) run() {
 	}
 }
 
+// Puts the Elevator into a defined state.
 func (el *Elevator) elevInit() {
 	fmt.Println("\x1b[34;1m::: Start Elevator Init :::\x1b[0m")
 	driver.Heis_set_speed(0)
@@ -113,6 +114,7 @@ func (el *Elevator) elevInit() {
 	fmt.Println("\x1b[33;1m::: Elevator Init done :::\x1b[0m")
 }
 
+// Will update the Elevators current floor.
 func (el *Elevator) floorListener() {
 	var floor, currFloor int = -1, -1
 	for {
@@ -124,6 +126,7 @@ func (el *Elevator) floorListener() {
 	}
 }
 
+// Tells the Elevator to go to the given objective.
 func (el *Elevator) goToObjective(stop chan bool, obj types.Order, currFloor int) {
 	dest := obj.Floor
 	diff := dest - currFloor
@@ -148,6 +151,7 @@ func (el *Elevator) goToObjective(stop chan bool, obj types.Order, currFloor int
 	el.objDone <- true
 }
 
+// Tells the Elevator to go in the given direction.
 func (el *Elevator) goDirection(dir int) {
 	switch dir {
 	case types.UP:
@@ -164,12 +168,16 @@ func (el *Elevator) goDirection(dir int) {
 	}
 }
 
+// Opens the doors for the Elevator.
 func openDoors() {
 	driver.Heis_set_door_open_lamp(1)
 	time.Sleep(DOOR_TIMER * time.Millisecond)
 	driver.Heis_set_door_open_lamp(0)
 }
 
+// Will go to the internal orders stored locally on the pc.
+// This will happen when the Elevator program has quitted before
+// it has processed the interal orders.
 func processInternalBackup() {
 	fmt.Println("\x1b[34;1m::: Start Process Internal Backup :::\x1b[0m")
 
