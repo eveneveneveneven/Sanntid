@@ -40,7 +40,7 @@ func CreateBackupsAndListen(sigc chan os.Signal) {
 			fmt.Printf("\t\x1b[31;1mError\x1b[0m |CreateBackupsAndListen| [%v], continue\n", err)
 		}
 
-		fmt.Printf("\t\x1b[31;1mError\x1b[0m |CreateBackupsAndListen| [Child process has exited], create new one\n", err)
+		fmt.Println("\t\x1b[31;1mError\x1b[0m |CreateBackupsAndListen| [Child process has exited], create new one")
 
 		time.Sleep(500 * time.Millisecond)
 	}
