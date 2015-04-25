@@ -14,8 +14,8 @@ import (
 const (
 	TCP_PORT = 30011
 
-	READ_DEADLINE  = 200 // milliseconds
-	WRITE_DEADLINE = 200 // milliseconds
+	READ_DEADLINE  = 500 // milliseconds
+	WRITE_DEADLINE = 500 // milliseconds
 )
 
 func readFromTCPConn(conn *net.TCPConn, decoder *gob.Decoder,

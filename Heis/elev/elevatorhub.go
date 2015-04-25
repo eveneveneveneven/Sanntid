@@ -3,6 +3,7 @@ package elev
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"../backup"
 	"../types"
@@ -50,8 +51,8 @@ func NewElevatorHub(cleanupCh chan bool, resetCh chan bool,
 		msgSend:    sendCh,
 		msgRecieve: recieveCh,
 
-		newNetwork: make(chan types.NetworkMessage),
-		newObj:     make(chan types.Order),
+		newNetwork: make(chan types.NetworkMessage, 1),
+		newObj:     make(chan types.Order, 1),
 
 		newElevstat: make(chan types.ElevStat, 1),
 		sendElevObj: make(chan types.Order, 1),
@@ -74,27 +75,31 @@ func (eh *ElevatorHub) Run() {
 	finishAllOrders := false
 	for {
 		select {
-		case <-eh.cleanup:
-			eh.elev.goDirection(types.STOP)
-			fmt.Println("Program is quitting")
-			return
 		case _, ok := <-eh.reset:
 			if !ok {
-				fmt.Println("\t\x1b[31;1m::: FINISH ALL ORDERS ACTIVATED :::\x1b[0m")
 				finishAllOrders = true
 			}
+		default:
+		}
+		eh.checkForAndResolveMultipleMaster(finishAllOrders)
+
+		select {
+		case <-eh.cleanup:
+			eh.elev.goDirection(types.STOP)
+			fmt.Println("\t\x1b[31;1m::: PROGRAM IS QUITTING :::\x1b[0m")
+			return
 		case obj := <-eh.newObj:
-			fmt.Println("parseNewObj")
 			eh.parseNewObj(obj)
-			fmt.Println("parseNewObj done")
+			eh.checkForAndResolveMultipleMaster(finishAllOrders)
 		case obj := <-eh.objComplete:
-			fmt.Println("parseObjComplete")
 			eh.parseObjComplete(obj)
-			fmt.Println("parseObjComplete done")
+			eh.checkForAndResolveMultipleMaster(finishAllOrders)
 		case netstat := <-eh.msgRecieve:
-			response := eh.parseNewMsg(netstat)
-			eh.newNetwork <- *eh.currNetwork
-			eh.msgSend <- response
+			if !finishAllOrders {
+				response := eh.parseNewMsg(netstat)
+				eh.newNetwork <- *eh.currNetwork
+				eh.msgSend <- response
+			}
 		case elevstat := <-eh.newElevstat:
 			eh.parseNewElevstat(&elevstat)
 		case order := <-eh.buttonPress:
@@ -102,25 +107,35 @@ func (eh *ElevatorHub) Run() {
 				eh.parseButtonPress(order)
 			}
 		}
-		if finishAllOrders {
-			obj := costFunction(eh.currNetwork)
-			if obj == nil {
-				fmt.Println("\t\x1b[31;1m::: THE END :::\x1b[0m")
-				os.Exit(0)
+	}
+}
+
+func (eh *ElevatorHub) checkForAndResolveMultipleMaster(finishAllOrders bool) {
+	if finishAllOrders {
+		eh.currNetwork.Statuses[eh.currNetwork.Id] = *eh.currElevstat
+		for order, completed := range eh.currNetwork.Orders {
+			if completed {
+				delete(eh.currNetwork.Orders, order)
 			}
-			eh.removeRedundantOrders(eh.currNetwork)
-			for order, completed := range eh.currNetwork.Orders {
-				if completed {
-					delete(eh.currNetwork.Orders, order)
-				}
-			}
-			eh.newNetwork <- *eh.currNetwork
 		}
+		for order, completed := range eh.newOrders {
+			if completed {
+				delete(eh.currNetwork.Orders, order)
+			}
+		}
+		setActiveLights(eh.currNetwork)
+		if len(eh.currNetwork.Orders) == 0 {
+			fmt.Println("\t\x1b[31;1m::: DONE FINISH ALL ORDERS :::\x1b[0m")
+			fmt.Println("\t\x1b[31;1m::: RESTARTING :::\x1b[0m")
+			os.Exit(0)
+		}
+		fmt.Println()
+		eh.newNetwork <- *eh.currNetwork
+		time.Sleep(200 * time.Millisecond)
 	}
 }
 
 func (eh *ElevatorHub) parseNewObj(obj types.Order) {
-	fmt.Println("NEW OBJ ::::", obj)
 	eh.currObj = &obj
 	select {
 	case eh.sendElevObj <- obj:
@@ -147,7 +162,6 @@ func (eh *ElevatorHub) parseObjComplete(obj types.Order) {
 }
 
 func (eh *ElevatorHub) parseNewMsg(netstat *types.NetworkMessage) *types.NetworkMessage {
-	fmt.Println("recieved ::", netstat)
 	eh.currNetwork = netstat
 	setActiveLights(netstat)
 	response := types.NewNetworkMessage()
@@ -166,8 +180,6 @@ func (eh *ElevatorHub) parseNewMsg(netstat *types.NetworkMessage) *types.Network
 	eh.removeRedundantOrders(response)
 	eh.currElevstat.InternalOrders = internal
 	eh.currNetwork.Statuses[eh.currNetwork.Id] = *eh.currElevstat
-	fmt.Println("currnetw ::", eh.currNetwork)
-	fmt.Println("response ::", response)
 	return response
 }
 

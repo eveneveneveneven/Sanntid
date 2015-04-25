@@ -67,7 +67,9 @@ func (el *Elevator) run() {
 			el.obj = &obj
 			go el.goToObjective(el.stop, obj, el.state.Floor)
 		case <-el.objDone:
+			fmt.Println("sending objdone")
 			el.objComplete <- *el.obj
+			fmt.Println("done objdone")
 			el.state.Floor = el.obj.Floor
 			close(el.stop)
 			el.stop = make(chan bool)

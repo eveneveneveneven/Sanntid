@@ -123,6 +123,7 @@ slaveloop:
 			nh.msgSendLocal <- newNetstat
 		case <-nh.foundMaster:
 			fmt.Println("\x1b[31;1m::: MULTIPLE MASTERS FOUND :::\x1b[0m")
+			fmt.Println("\t\x1b[31;1m::: FINISH ALL ORDERS ACTIVATED :::\x1b[0m")
 			if len(nh.cm.conns) == 0 {
 				fmt.Println("\x1b[31;1m::: I QUIT :::\x1b[0m")
 				close(nh.reset)
