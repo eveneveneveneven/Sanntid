@@ -62,7 +62,9 @@ func NewNetworkHub(resetCh chan bool,
 }
 
 func (nh *NetworkHub) Run() {
-	fmt.Println("Start NetworkHub!")
+	fmt.Println("\x1b[34;1m::: Start NetworkHub :::\x1b[0m")
+
+	fmt.Println("\n\x1b[31;1m::: Becoming Slave :::\x1b[0m\n")
 
 	connected := false
 	// Slave loop
@@ -74,7 +76,7 @@ slaveloop:
 				continue
 			}
 			if err := nh.cm.connectToNetwork(masterIp); err != nil {
-				fmt.Printf("\x1b[31;1mError\x1b[0m |NetworkHub.Run| [%v], exit program\n\n", err)
+				fmt.Printf("\t\x1b[31;1mError\x1b[0m |NetworkHub.Run| [%v], exit program\n\n", err)
 				os.Exit(1)
 			}
 			connected = true
@@ -83,11 +85,9 @@ slaveloop:
 			case -1:
 				fallthrough
 			case 1:
-				fmt.Println("\n\x1b[31;1m::: Becoming Master :::\x1b[0m\n\n")
 				nh.id = 0
 				break slaveloop
 			default:
-				fmt.Println("Master is dead, continue as slave...")
 				nh.id--
 			}
 			connected = false
@@ -101,11 +101,14 @@ slaveloop:
 		}
 	}
 
+	fmt.Println("\n\x1b[31;1m::: Becoming Master :::\x1b[0m\n")
+
 	go startUDPBroadcast(nh.reset)
 	go newNetStatManager(nh.netstatNewMsg, nh.netstatUpdate, nh.netstatTick).
 		run(nh.networkStatus, nh.reset)
 
 	tick := time.Tick(SEND_INTERVAL * time.Millisecond)
+
 	// Master loop
 	for {
 		select {
@@ -120,14 +123,13 @@ slaveloop:
 			nh.msgSendGlobal <- newNetstat
 			nh.msgSendLocal <- newNetstat
 		case <-nh.foundMaster:
-			fmt.Println("\x1b[31;1m::: MULTIPLE MASTERS FOUND :::\x1b[0m")
-			fmt.Println("\t\x1b[31;1m::: FINISH ALL ORDERS ACTIVATED :::\x1b[0m")
+			fmt.Println("\t\x1b[31;1m::: Multiple Masters Found :::\x1b[0m")
 			if len(nh.cm.conns) == 0 {
-				fmt.Println("\x1b[31;1m::: I QUIT :::\x1b[0m")
+				fmt.Println("\t\x1b[31;1m::: Finish All Orders Activated :::\x1b[0m")
 				close(nh.reset)
 				return
 			} else {
-				fmt.Println("\x1b[31;1m::: numConns", len(nh.cm.conns), ":::\x1b[0m")
+				fmt.Println("\x1b[31;1m::: Continue As Normal :::\x1b[0m")
 			}
 		}
 	}

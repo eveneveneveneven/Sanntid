@@ -52,7 +52,8 @@ func newConnManager(hbRec, hbSend chan *types.NetworkMessage) *connManager {
 }
 
 func (cm *connManager) run() {
-	fmt.Println("\tStarting connection manager!")
+	fmt.Println("\x1b[34;1m::: Start Connection Manager :::\x1b[0m")
+
 	go startTCPListener(cm.newConn)
 	for {
 		// prioritized channels to check
@@ -76,7 +77,6 @@ func (cm *connManager) run() {
 		case sendMsg := <-cm.hubSend:
 			numConns := len(cm.conns)
 			if numConns > 0 {
-				fmt.Println("starting sending")
 				for _, c := range cm.conns {
 					msgHolder := new(types.NetworkMessage)
 					types.DeepCopy(msgHolder, sendMsg)
@@ -89,14 +89,13 @@ func (cm *connManager) run() {
 					}
 				}
 				cm.wg.Wait()
-				fmt.Println("sending done")
 			}
 		}
 	}
 }
 
 func (cm *connManager) connectToNetwork(masterIP string) error {
-	fmt.Printf("\tConnecting to network, Master ip:%v\n", masterIP)
+	fmt.Printf("\x1b[36;1m::: Connecting To Network, Master Ip=%v :::\x1b[0m\n", masterIP)
 	cm.masterIP = masterIP
 	conn, err := createTCPConn(cm.masterIP)
 	if err != nil {
@@ -107,7 +106,7 @@ func (cm *connManager) connectToNetwork(masterIP string) error {
 }
 
 func (cm *connManager) addConnection(conn *net.TCPConn) {
-	fmt.Printf("\tAdding connection [%v] with id %v\n", conn, cm.currId)
+	fmt.Printf("\x1b[36;1m::: Adding New Connection With Id=%v :::\x1b[0m\n", cm.currId)
 	c := &connection{
 		id:        cm.currId,
 		sendMsg:   make(chan *types.NetworkMessage),
@@ -120,7 +119,7 @@ func (cm *connManager) addConnection(conn *net.TCPConn) {
 
 func (cm *connManager) removeConnection(conn *net.TCPConn) {
 	if removeConn, ok := cm.conns[conn]; ok {
-		fmt.Printf("\tRemoving connection [%v] with id %v\n", conn, removeConn.id)
+		fmt.Printf("\x1b[31;1m::: Removing Connection With Id=%v :::\x1b[0m\n", cm.currId-1)
 		delete(cm.conns, conn)
 		for conn, c := range cm.conns {
 			if c.id > removeConn.id {
@@ -129,7 +128,7 @@ func (cm *connManager) removeConnection(conn *net.TCPConn) {
 		}
 		cm.currId--
 	} else {
-		fmt.Println("\t\t\x1b[31;1mError\x1b[0m |cm.removeConnection|",
+		fmt.Println("\t\x1b[31;1mError\x1b[0m |cm.removeConnection|",
 			"[Did not find a connection to remove in the connection list]")
 	}
 }

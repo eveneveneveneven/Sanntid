@@ -23,8 +23,7 @@ func init() {
 }
 
 func cleanupWhenExiting(cleanup chan bool, sigc chan os.Signal) {
-	s := <-sigc
-	fmt.Println("\n", s)
+	<-sigc
 	cleanup <- true
 	time.Sleep(100 * time.Millisecond)
 	os.Exit(0)
@@ -41,7 +40,8 @@ func main() {
 	} else {
 		cleanup := make(chan bool)
 		go cleanupWhenExiting(cleanup, sigc)
-		fmt.Println("Start program!")
+
+		fmt.Println("\n\n\x1b[34;1m::: Start Main Program :::\x1b[0m")
 
 		resetCh := make(chan bool)
 		nethubToElevCh := make(chan *types.NetworkMessage, 1)
@@ -56,5 +56,5 @@ func main() {
 
 		select {}
 	}
-	fmt.Println("The End!")
+	fmt.Println("\t\n\x1b[31;1m::: The End :::\x1b[0m\n\n")
 }

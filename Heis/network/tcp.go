@@ -44,7 +44,8 @@ func sendToTCPConn(conn *net.TCPConn, encoder *gob.Encoder,
 func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *types.NetworkMessage,
 	connEnd chan *net.TCPConn, terminate chan bool, wg *sync.WaitGroup) {
 
-	fmt.Println("\t\tStarting new TCP handler!")
+	fmt.Println("\x1b[34;1m::: Start New TCP Handler :::\x1b[0m")
+
 	encoder := gob.NewEncoder(conn)
 	decoder := gob.NewDecoder(conn)
 	stop := make(chan bool, 1)
@@ -76,10 +77,10 @@ func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *types.Netwo
 			wakeRecieve <- recieveMsg
 		case msgHolder := <-wakeSend:
 			if err := sendToTCPConn(conn, encoder, msgHolder); err != nil {
-				fmt.Printf("\t\t\x1b[31;1mError\x1b[0m |createTCPHandler| [%v]\n", err)
+				fmt.Printf("\t\x1b[31;1mError\x1b[0m |createTCPHandler| [%v]\n", err)
 				numErrorSend++
 				if numErrorSend >= 5 {
-					fmt.Println("\t\tFailed to send msg 5 times, stops connection")
+					fmt.Println("\t\x1b[31;1mError\x1b[0m |createTCPHandler| [tFailed to send msg 5 times, stops connection]")
 					connEnd <- conn
 					conn.Close()
 					wg.Done()
@@ -95,7 +96,8 @@ func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *types.Netwo
 }
 
 func startTCPListener(newConn chan *net.TCPConn) {
-	fmt.Println("\t\tStarting TCP listener!")
+	fmt.Println("\x1b[34;1m::: Start TCP Listener :::\x1b[0m")
+
 	laddr := &net.TCPAddr{
 		Port: TCP_PORT,
 		IP:   net.ParseIP("localhost"),
@@ -103,7 +105,7 @@ func startTCPListener(newConn chan *net.TCPConn) {
 
 	ln, err := net.ListenTCP("tcp", laddr)
 	if err != nil {
-		fmt.Printf("\t\t\x1b[31;1mError\x1b[0m |startTCPListener| [%v], quitting program\n", err)
+		fmt.Printf("\t\x1b[31;1mError\x1b[0m |startTCPListener| [%v], quitting program\n", err)
 		os.Exit(1)
 	}
 	defer ln.Close()
@@ -111,7 +113,7 @@ func startTCPListener(newConn chan *net.TCPConn) {
 	for {
 		conn, err := ln.AcceptTCP()
 		if err != nil {
-			fmt.Printf("\t\t\x1b[31;1mError\x1b[0m |startTCPListener| [%v], continue listening\n", err)
+			fmt.Printf("\t\x1b[31;1mError\x1b[0m |startTCPListener| [%v], continue listening\n", err)
 			continue
 		}
 		newConn <- conn
@@ -119,7 +121,7 @@ func startTCPListener(newConn chan *net.TCPConn) {
 }
 
 func createTCPConn(ip string) (*net.TCPConn, error) {
-	fmt.Println("\t\tCreating TCP connection")
+	fmt.Println("\x1b[36;1m::: Creating New TCP Connection :::\x1b[0m")
 	raddr := &net.TCPAddr{
 		Port: TCP_PORT,
 		IP:   net.ParseIP(ip),

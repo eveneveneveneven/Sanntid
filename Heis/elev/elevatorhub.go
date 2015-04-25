@@ -71,7 +71,8 @@ func NewElevatorHub(cleanupCh chan bool, resetCh chan bool,
 }
 
 func (eh *ElevatorHub) Run() {
-	fmt.Println("Start ElevatorHub!")
+	fmt.Println("\x1b[34;1m::: Start ElevatorHub :::\x1b[0m")
+
 	finishAllOrders := false
 	for {
 		select {
@@ -112,6 +113,8 @@ func (eh *ElevatorHub) Run() {
 
 func (eh *ElevatorHub) checkForAndResolveMultipleMaster(finishAllOrders bool) {
 	if finishAllOrders {
+		fmt.Println("\n\t\x1b[31;1m::: Finish All Orders In Progress :::\x1b[0m\n")
+
 		eh.currNetwork.Statuses[eh.currNetwork.Id] = *eh.currElevstat
 		for order, completed := range eh.currNetwork.Orders {
 			if completed {
@@ -126,7 +129,7 @@ func (eh *ElevatorHub) checkForAndResolveMultipleMaster(finishAllOrders bool) {
 		setActiveLights(eh.currNetwork)
 		if len(eh.currNetwork.Orders) == 0 {
 			fmt.Println("\t\x1b[31;1m::: DONE FINISH ALL ORDERS :::\x1b[0m")
-			fmt.Println("\t\x1b[31;1m::: RESTARTING :::\x1b[0m")
+			fmt.Println("\t\x1b[31;1m::: RESTARTING :::\x1b[0m\n\n")
 			os.Exit(0)
 		}
 		fmt.Println()
@@ -136,7 +139,7 @@ func (eh *ElevatorHub) checkForAndResolveMultipleMaster(finishAllOrders bool) {
 }
 
 func (eh *ElevatorHub) parseNewObj(obj types.Order) {
-	fmt.Println("\n\x1b[33;1m::: New Objective :::")
+	fmt.Println("\x1b[33;1m::: New Objective :::")
 	fmt.Printf("::: %v :::\x1b[0m\n\n", obj)
 
 	eh.currObj = &obj
@@ -148,7 +151,7 @@ func (eh *ElevatorHub) parseNewObj(obj types.Order) {
 }
 
 func (eh *ElevatorHub) parseObjComplete(obj types.Order) {
-	fmt.Println("\n\x1b[32;1m::: Objective complete :::")
+	fmt.Println("\x1b[32;1m::: Objective complete :::")
 	fmt.Printf("::: %v :::\x1b[0m\n", obj)
 	eh.newOrders[obj] = true
 	if obj.ButtonPress != types.BUTTON_INTERNAL {
@@ -256,12 +259,8 @@ func (eh *ElevatorHub) parseNewElevstat(elevstat *types.ElevStat) {
 
 func (eh *ElevatorHub) parseButtonPress(order types.Order) {
 	if _, ok := eh.currNetwork.Orders[order]; !ok {
-		fmt.Println("\n\x1b[36;1m::: New Order Received :::")
+		fmt.Println("\x1b[36;1m::: New Order Received :::")
 		fmt.Printf("::: %v :::\x1b[0m\n\n", order)
-		eh.newOrders[order] = false
 	}
-}
-
-func CleanExit() {
-	newElevator(nil, nil, nil)
+	eh.newOrders[order] = false
 }

@@ -25,7 +25,8 @@ func getLocalAddress() string {
 }
 
 func startUDPListener(foundMaster chan string, masterMissing chan bool) {
-	fmt.Println("\tStarting UDP listener!")
+	fmt.Println("\x1b[34;1m::: Start UDP Listener :::\x1b[0m")
+
 	laddr := &net.UDPAddr{
 		Port: UDP_PORT,
 		IP:   net.ParseIP("localhost"),
@@ -54,7 +55,8 @@ func startUDPListener(foundMaster chan string, masterMissing chan bool) {
 }
 
 func startUDPBroadcast(resetCh chan bool) {
-	fmt.Println("\tStarting UDP broadcast!")
+	fmt.Println("\x1b[34;1m::: Start UDP Broadcaster :::\x1b[0m")
+
 	// Broadcast address
 	baddr := &net.UDPAddr{
 		Port: UDP_PORT,

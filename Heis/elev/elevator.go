@@ -56,7 +56,8 @@ func newElevator(newElevstatCh chan types.ElevStat,
 }
 
 func (el *Elevator) run() {
-	fmt.Println("Start Elevator!")
+	fmt.Println("\x1b[34;1m::: Start Elevator :::\x1b[0m")
+
 	for {
 		select {
 		case obj := <-el.newObj:
@@ -93,7 +94,7 @@ func (el *Elevator) run() {
 }
 
 func (el *Elevator) elevInit() {
-	fmt.Println("Elevator init")
+	fmt.Println("\x1b[34;1m::: Start Elevator Init :::\x1b[0m")
 	driver.Heis_set_speed(0)
 	time.Sleep(100 * time.Millisecond)
 	if driver.Heis_get_floor() == -1 {
@@ -109,7 +110,7 @@ func (el *Elevator) elevInit() {
 		el.state.Floor = floor
 		el.state.Dir = types.STOP
 	}
-	fmt.Println("Elevator init done")
+	fmt.Println("\x1b[33;1m::: Elevator Init done :::\x1b[0m")
 }
 
 func (el *Elevator) floorListener() {
@@ -170,6 +171,8 @@ func openDoors() {
 }
 
 func processInternalBackup() {
+	fmt.Println("\x1b[34;1m::: Start Process Internal Backup :::\x1b[0m")
+
 	internal := sort.IntSlice(backup.ReadInternalBackup())
 	sort.Sort(internal)
 	clearAllLights()
@@ -203,4 +206,6 @@ func processInternalBackup() {
 		openDoors()
 	}
 	backup.WriteInternalBackup([]int{-1, -1, -1, -1})
+
+	fmt.Println("\x1b[33;1m::: Process Internal Backup Done :::\x1b[0m")
 }

@@ -30,7 +30,8 @@ func newNetStatManager(newMsgCh, updateCh chan *types.NetworkMessage,
 }
 
 func (ns *netStatManager) run(currNetstat *types.NetworkMessage, resetCh chan bool) {
-	fmt.Println("Start NetStatManager!")
+	fmt.Println("\x1b[34;1m::: Start Netstat Manager :::\x1b[0m")
+
 	ns.netstat = currNetstat
 	ns.netstat.Id = 0
 	for {

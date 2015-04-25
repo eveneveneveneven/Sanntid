@@ -26,7 +26,7 @@ func newOrderHandler(newNetworkCh chan types.NetworkMessage,
 }
 
 func (oh *orderHandler) run() {
-	fmt.Println("Start OrderHandler!")
+	fmt.Println("\x1b[34;1m::: Start Order Handler :::\x1b[0m")
 	for {
 		select {
 		case newNetwork := <-oh.newNetwork:
