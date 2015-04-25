@@ -1,7 +1,6 @@
 package main
 
 import (
-	//"encoding/gob"
 	"flag"
 	"fmt"
 	"os"
@@ -44,12 +43,13 @@ func main() {
 		go cleanupWhenExiting(cleanup, sigc)
 		fmt.Println("Start program!")
 
+		resetCh := make(chan bool)
 		nethubToElevCh := make(chan *types.NetworkMessage, 1)
 		elevToNethubCh := make(chan *types.NetworkMessage, 1)
 
 		// Init of modules
-		elevatorHub := elev.NewElevatorHub(cleanup, elevToNethubCh, nethubToElevCh)
-		networkHub := network.NewNetworkHub(nethubToElevCh, elevToNethubCh)
+		elevatorHub := elev.NewElevatorHub(cleanup, resetCh, elevToNethubCh, nethubToElevCh)
+		networkHub := network.NewNetworkHub(resetCh, nethubToElevCh, elevToNethubCh)
 
 		go elevatorHub.Run()
 		go networkHub.Run()

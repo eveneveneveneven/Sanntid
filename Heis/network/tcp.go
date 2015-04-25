@@ -6,17 +6,23 @@ import (
 	"net"
 	"os"
 	"sync"
+	"time"
 
 	"../types"
 )
 
 const (
 	TCP_PORT = 30011
+
+	READ_DEADLINE  = 200 // milliseconds
+	WRITE_DEADLINE = 200 // milliseconds
 )
 
-func readFromTCPConn(decoder *gob.Decoder, recieve chan *types.NetworkMessage, stop chan bool) {
+func readFromTCPConn(conn *net.TCPConn, decoder *gob.Decoder,
+	recieve chan *types.NetworkMessage, stop chan bool) {
 	for {
 		msg := &types.NetworkMessage{}
+		conn.SetReadDeadline(time.Now().Add(READ_DEADLINE * time.Millisecond))
 		if err := decoder.Decode(msg); err != nil {
 			fmt.Printf("\t\t\x1b[31;1mError\x1b[0m |readFromTCPConn| [%v]\n", err)
 			stop <- true
@@ -26,7 +32,9 @@ func readFromTCPConn(decoder *gob.Decoder, recieve chan *types.NetworkMessage, s
 	}
 }
 
-func sendToTCPConn(encoder *gob.Encoder, msg *types.NetworkMessage) error {
+func sendToTCPConn(conn *net.TCPConn, encoder *gob.Encoder,
+	msg *types.NetworkMessage) error {
+	conn.SetWriteDeadline(time.Now().Add(WRITE_DEADLINE * time.Millisecond))
 	if err := encoder.Encode(msg); err != nil {
 		return err
 	}
@@ -42,13 +50,13 @@ func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *types.Netwo
 	stop := make(chan bool, 1)
 	recieve := make(chan *types.NetworkMessage)
 	numErrorSend := 0
-	go readFromTCPConn(decoder, recieve, stop)
+	go readFromTCPConn(conn, decoder, recieve, stop)
 	for {
 		// prioritized channel to check
 		select {
 		case <-stop:
-			connEnd <- conn
 			conn.Close()
+			connEnd <- conn
 			return
 		case <-terminate:
 			conn.Close()
@@ -58,8 +66,8 @@ func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *types.Netwo
 
 		select {
 		case <-stop:
-			connEnd <- conn
 			conn.Close()
+			connEnd <- conn
 			return
 		case <-terminate:
 			conn.Close()
@@ -67,7 +75,7 @@ func createTCPHandler(conn *net.TCPConn, wakeRecieve, wakeSend chan *types.Netwo
 		case recieveMsg := <-recieve:
 			wakeRecieve <- recieveMsg
 		case msgHolder := <-wakeSend:
-			if err := sendToTCPConn(encoder, msgHolder); err != nil {
+			if err := sendToTCPConn(conn, encoder, msgHolder); err != nil {
 				fmt.Printf("\t\t\x1b[31;1mError\x1b[0m |createTCPHandler| [%v]\n", err)
 				numErrorSend++
 				if numErrorSend >= 5 {

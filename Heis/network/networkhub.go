@@ -3,7 +3,6 @@ package network
 import (
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"../types"
@@ -14,6 +13,8 @@ const (
 )
 
 type NetworkHub struct {
+	reset chan bool
+
 	id int
 
 	networkStatus *types.NetworkMessage
@@ -32,8 +33,11 @@ type NetworkHub struct {
 	netstatTick   chan bool
 }
 
-func NewNetworkHub(sendLocalCh, recieveLocalCh chan *types.NetworkMessage) *NetworkHub {
+func NewNetworkHub(resetCh chan bool,
+	sendLocalCh, recieveLocalCh chan *types.NetworkMessage) *NetworkHub {
 	nh := &NetworkHub{
+		reset: resetCh,
+
 		id: -1,
 
 		networkStatus: types.NewNetworkMessage(),
@@ -99,12 +103,11 @@ slaveloop:
 		}
 	}
 
-	resetCh := make(chan bool)
-	go startUDPBroadcast(resetCh)
+	go startUDPBroadcast(nh.reset)
 	go newNetStatManager(nh.netstatNewMsg, nh.netstatUpdate, nh.netstatTick).
-		run(nh.networkStatus, resetCh)
+		run(nh.networkStatus, nh.reset)
 
-	tick := time.Tick(types.SEND_INTERVAL * time.Millisecond)
+	tick := time.Tick(SEND_INTERVAL * time.Millisecond)
 	// Master loop
 	for {
 		select {
@@ -118,14 +121,14 @@ slaveloop:
 			nh.networkStatus = newNetstat
 			nh.msgSendGlobal <- newNetstat
 			nh.msgSendLocal <- newNetstat
-		case foundIp := <-nh.foundMaster:
-			myIp := getLocalAddress()
+		case <-nh.foundMaster:
 			fmt.Println("\x1b[31;1m::: MULTIPLE MASTERS FOUND :::\x1b[0m")
-			if strings.Split(foundIp, ".")[3] < strings.Split(myIp, ".")[3] {
-				fmt.Println("\x1b[31;1m::: RESETTING :::\x1b[0m")
-				os.Exit(0)
+			if len(nh.cm.conns) == 0 {
+				fmt.Println("\x1b[31;1m::: I QUIT :::\x1b[0m")
+				close(nh.reset)
+				return
 			} else {
-				fmt.Println("\x1b[31;1m::: CLAIM MASTER :::\x1b[0m")
+				fmt.Println("\x1b[31;1m::: numConns", len(nh.cm.conns), ":::\x1b[0m")
 			}
 		}
 	}

@@ -6,8 +6,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"../types"
 )
 
 const (

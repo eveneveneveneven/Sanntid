@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	NUM_BACKUPS = 5
+	NUM_BACKUPS = 2
 )
 
 func CreateBackupsAndListen(sigc chan os.Signal) {

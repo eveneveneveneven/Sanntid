@@ -77,12 +77,16 @@ func (cm *connManager) run() {
 			numConns := len(cm.conns)
 			if numConns > 0 {
 				fmt.Println("starting sending")
-				cm.wg.Add(numConns)
 				for _, c := range cm.conns {
 					msgHolder := new(types.NetworkMessage)
 					types.DeepCopy(msgHolder, sendMsg)
 					msgHolder.Id = c.id
-					c.sendMsg <- msgHolder
+					cm.wg.Add(1)
+					select {
+					case c.sendMsg <- msgHolder:
+					default:
+						cm.wg.Done()
+					}
 				}
 				cm.wg.Wait()
 				fmt.Println("sending done")

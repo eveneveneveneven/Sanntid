@@ -2,6 +2,7 @@ package elev
 
 import (
 	"fmt"
+	"os"
 
 	"../backup"
 	"../types"
@@ -13,6 +14,7 @@ const (
 
 type ElevatorHub struct {
 	cleanup chan bool
+	reset   chan bool
 
 	currNetwork  *types.NetworkMessage
 	currElevstat *types.ElevStat
@@ -34,10 +36,11 @@ type ElevatorHub struct {
 	elev *Elevator
 }
 
-func NewElevatorHub(cleanupCh chan bool,
+func NewElevatorHub(cleanupCh chan bool, resetCh chan bool,
 	sendCh, recieveCh chan *types.NetworkMessage) *ElevatorHub {
 	eh := &ElevatorHub{
 		cleanup: cleanupCh,
+		reset:   resetCh,
 
 		currNetwork:  types.NewNetworkMessage(),
 		currElevstat: types.NewElevStat(),
@@ -68,12 +71,18 @@ func NewElevatorHub(cleanupCh chan bool,
 
 func (eh *ElevatorHub) Run() {
 	fmt.Println("Start ElevatorHub!")
+	finishAllOrders := false
 	for {
 		select {
 		case <-eh.cleanup:
 			eh.elev.goDirection(types.STOP)
 			fmt.Println("Program is quitting")
 			return
+		case _, ok := <-eh.reset:
+			if !ok {
+				fmt.Println("\t\x1b[31;1m::: FINISH ALL ORDERS ACTIVATED :::\x1b[0m")
+				finishAllOrders = true
+			}
 		case obj := <-eh.newObj:
 			fmt.Println("parseNewObj")
 			eh.parseNewObj(obj)
@@ -83,11 +92,29 @@ func (eh *ElevatorHub) Run() {
 			eh.parseObjComplete(obj)
 			fmt.Println("parseObjComplete done")
 		case netstat := <-eh.msgRecieve:
-			eh.parseNewMsg(netstat)
+			response := eh.parseNewMsg(netstat)
+			eh.newNetwork <- *eh.currNetwork
+			eh.msgSend <- response
 		case elevstat := <-eh.newElevstat:
 			eh.parseNewElevstat(&elevstat)
 		case order := <-eh.buttonPress:
-			eh.parseButtonPress(order)
+			if !finishAllOrders {
+				eh.parseButtonPress(order)
+			}
+		}
+		if finishAllOrders {
+			obj := costFunction(eh.currNetwork)
+			if obj == nil {
+				fmt.Println("\t\x1b[31;1m::: THE END :::\x1b[0m")
+				os.Exit(0)
+			}
+			eh.removeRedundantOrders(eh.currNetwork)
+			for order, completed := range eh.currNetwork.Orders {
+				if completed {
+					delete(eh.currNetwork.Orders, order)
+				}
+			}
+			eh.newNetwork <- *eh.currNetwork
 		}
 	}
 }
@@ -119,7 +146,7 @@ func (eh *ElevatorHub) parseObjComplete(obj types.Order) {
 	eh.currElevstat.Floor = obj.Floor
 }
 
-func (eh *ElevatorHub) parseNewMsg(netstat *types.NetworkMessage) {
+func (eh *ElevatorHub) parseNewMsg(netstat *types.NetworkMessage) *types.NetworkMessage {
 	fmt.Println("recieved ::", netstat)
 	eh.currNetwork = netstat
 	setActiveLights(netstat)
@@ -139,10 +166,9 @@ func (eh *ElevatorHub) parseNewMsg(netstat *types.NetworkMessage) {
 	eh.removeRedundantOrders(response)
 	eh.currElevstat.InternalOrders = internal
 	eh.currNetwork.Statuses[eh.currNetwork.Id] = *eh.currElevstat
-	eh.newNetwork <- *eh.currNetwork
-	eh.msgSend <- response
 	fmt.Println("currnetw ::", eh.currNetwork)
 	fmt.Println("response ::", response)
+	return response
 }
 
 func (eh *ElevatorHub) removeRedundantOrders(response *types.NetworkMessage) {
